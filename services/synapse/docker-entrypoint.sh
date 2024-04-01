@@ -1,6 +1,6 @@
 #!/bin/bash
 function make_secret() {
-  dd if=/dev/urandom bs=3 count=32 | sha256sum
+  dd if=/dev/urandom bs=3 count=32 | sha256sum | cut -d ' ' -f 1
 }
 if [[ ! -f /data/env.sh ]]; then
   cat > /data/env.sh <<EOF
