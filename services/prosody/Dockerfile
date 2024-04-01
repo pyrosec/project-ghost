@@ -45,6 +45,7 @@ RUN ./configure && make && make install
 RUN chown -R prosody /usr/local/var/lib/prosody
 RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_cloud_notify
 RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_smacks
+RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_http_upload
 COPY ./modules/mod_sms.lua /usr/local/lib/prosody/modules/mod_sms.lua
 COPY ./templates /templates
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh

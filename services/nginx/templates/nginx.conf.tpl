@@ -46,8 +46,11 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Host $host;
         }
-        location ~ ^(?:/$|/(hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
-            set $proxied vaultwarden:80;
+        location ~ ^(/_matrix|/_synapse/client) {
+            # note: do not add a path (even a single /) after the port in `proxy_pass`,
+            # otherwise nginx will canonicalise the URI and cause signature verification
+            # errors.
+            set $proxied synapse:8008;
             proxy_pass           http://$proxied;
             proxy_set_header     X-Forwarded-For $remote_addr;
             proxy_set_header     X-Forwarded-Proto $scheme;
@@ -58,13 +61,8 @@ http {
             # Synapse responses may be chunked, which is an HTTP/1.1 feature.
             proxy_http_version   1.1;
         }
-  
-
-        location ~ ^(/_matrix|/_synapse/client) {
-            # note: do not add a path (even a single /) after the port in `proxy_pass`,
-            # otherwise nginx will canonicalise the URI and cause signature verification
-            # errors.
-            set $proxied synapse:8008;
+        location ~ ^(?:/$|/(vw_static|scripts|templates|app|images|static|hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
+            set $proxied vaultwarden:80;
             proxy_pass           http://$proxied;
             proxy_set_header     X-Forwarded-For $remote_addr;
             proxy_set_header     X-Forwarded-Proto $scheme;

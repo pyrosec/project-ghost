@@ -234,6 +234,7 @@ https_certificate = "$TLS_CERTIFICATE"
 --Component "gateway.example.com"
 --	component_secret = "password"
 http_default_host = "$DOMAIN"
+http_host = "$DOMAIN"
 http_ports = { 5280 }
 http_interfaces = { "*" }
         

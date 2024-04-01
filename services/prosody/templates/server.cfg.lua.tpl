@@ -11,9 +11,14 @@ VirtualHost "$DOMAIN"
 		key = "$TLS_PRIVATE_KEY";
 		certificate = "$TLS_CERTIFICATE";
 	}
-	disco_items = { { "upload.$DOMAIN" } }
-
-Component "upload.$DOMAIN" "http_file_share"
 
 Component "sms.$DOMAIN" "sms"
+  modules_enabled = {
+    "mam"
+  }
+
+Component "conference.$DOMAIN" "muc"
+
+Component "upload.$DOMAIN" "http_upload"
+  http_host = "$DOMAIN"
 
