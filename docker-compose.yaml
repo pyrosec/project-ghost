@@ -186,8 +186,6 @@ services:
     volumes:
       - vaultwarden:/data
       - logs:/var/log
-    ports:
-      - 3012:3012
     restart: unless-stopped
 volumes:
   postgres:
