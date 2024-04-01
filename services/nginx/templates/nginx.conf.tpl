@@ -46,7 +46,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Host $host;
         }
-        location ~ ^/(hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)? {
+        location ~ ^(?:/$|/(hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
             set $proxied vaultwarden:80;
             proxy_pass           http://$proxied;
             proxy_set_header     X-Forwarded-For $remote_addr;
