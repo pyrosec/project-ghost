@@ -19,6 +19,9 @@ Component "sms.$DOMAIN" "sms"
 
 Component "conference.$DOMAIN" "muc"
 
-Component "upload.$DOMAIN" "http_upload"
+Component "upload.$DOMAIN" "http_file_share"
   http_host = "$DOMAIN"
+  http_default_host = "$DOMAIN"
+  http_file_share_base_url = "https://$DOMAIN"
+  http_external_url = "https://$DOMAIN"
 

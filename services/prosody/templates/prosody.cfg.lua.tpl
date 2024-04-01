@@ -72,6 +72,8 @@ modules_enabled = {
 		--"bosh"; -- Enable BOSH clients, aka "Jabber over HTTP"
 		--"websocket"; -- XMPP over WebSockets
          	"http"; -- Serve static files from a directory over HTTP
+                "http_files";
+                "http_file_share";
 
 	-- Other specific functionality
 		"posix"; -- POSIX functionality, sends server to background, enables syslog, etc.
@@ -195,7 +197,7 @@ log = {
 -- (from e.g. Let's Encrypt) see https://prosody.im/doc/certificates
 
 -- Location of directory to find certificates in (relative to main config file):
-certificates = "certs"
+certificates = "/etc/letsencrypt/live/$DOMAIN"
 
 -- HTTPS currently only supports a single certificate, specify it here:
 https_certificate = "$TLS_CERTIFICATE"
@@ -233,8 +235,6 @@ https_certificate = "$TLS_CERTIFICATE"
 --
 --Component "gateway.example.com"
 --	component_secret = "password"
-http_default_host = "$DOMAIN"
-http_host = "$DOMAIN"
 http_ports = { 5280 }
 http_interfaces = { "*" }
         
