@@ -124,6 +124,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json
       - DOMAIN=${DOMAIN}
       - ROOT_PASSWORD=${ROOT_PASSWORD}
+      - VOICEMAIL_BUCKET=${VOICEMAIL_BUCKET}
     volumes:
       - asterisk:/etc/asterisk
       - spool:/var/spool
