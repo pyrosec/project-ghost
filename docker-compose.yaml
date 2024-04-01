@@ -141,13 +141,25 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding='UTF8' --lc-collate='C' --lc-ctype='C'
     restart: unless-stopped
   synapse:
-    image: matrixdotorg/synapse:latest
+    image: ghostdial/synapse
+    build:
+      dockerfile: Dockerfile
+      context: ./services/synapse
     volumes:
       - synapse:/data
       - logs:/var/log
     environment:
       - SYNAPSE_SERVER_NAME=${DOMAIN}
       - SYNAPSE_REPORT_STATS=no
+      - REGISTRATION_SHARED_SECRET=${REGISTRATION_SHARED_SECRET}
+      - TURN_URI=${TURN_URI}
+      - FORM_SECRET=${FORM_SECRET}
+      - MACAROON_SECRET_KEY=${MACAROON_SECRET_KEY}
+      - TURN_SHARED_SECRET=${TURN_SHARED_SECRET}
+      - RECAPTCHA_PUBLIC_KEY=${RECAPTCHA_PUBLIC_KEY}
+      - RECAPTCHA_PRIVATE_KEY=${RECAPTCHA_PRIVATE_KEY}
+      - SYNAPSE_CONFIG_DIR=/data
+      - SYNAPSE_DATA_DIR=/data
     depends_on:
       - postgres
     restart: unless-stopped
