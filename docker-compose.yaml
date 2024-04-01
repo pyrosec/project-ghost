@@ -133,7 +133,7 @@ services:
   postgres:
     image: postgres
     volumes:
-      postgres:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=matrix
@@ -144,9 +144,12 @@ services:
     image: matrixdotorg/synapse:latest
     volumes:
       - synapse:/data
+      - logs:/var/log
     environment:
       - SYNAPSE_SERVER_NAME=${DOMAIN}
       - SYNAPSE_REPORT_STATS=no
+    depends_on:
+      - postgres
     restart: unless-stopped
   nginx:
     image: ghostdial/nginx
@@ -155,15 +158,22 @@ services:
       dockerfile: Dockerfile
     volumes:
       - www-data:/usr/share/nginx/html
+      - logs:/var/log
+      - letsencrypt:/etc/letsencrypt
+    environment:
+      - DOMAIN=${DOMAIN}
     ports:
-      - 80:80
+      - 443:443
+    depends_on:
+      - synapse
+      - vaultwarden
     restart: unless-stopped
   vaultwarden:
     image: vaultwarden/server:latest
     volumes:
       - vaultwarden:/data
+      - logs:/var/log
     ports:
-      - 8080:80
       - 3012:3012
     restart: unless-stopped
 volumes:
