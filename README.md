@@ -12,7 +12,7 @@ Here is a breakdown of the apps you will use:
 
 | Platform | SIP Client | XMPP Client |
 | ----------- | ----------- | ----------- |
-| Android | Zoiper | Conversations (F-Droid version) |
+| Android | Acrobits Groundwire | Conversations (F-Droid version) |
 | iOS | Acrobits Groundwire | Siskin IM |
 | Linux | linphone | dino-im |
 | Mac OSX | linphone | Gajim |
@@ -25,25 +25,25 @@ To connect to the SIP server with the SIP client, use
 Generic SIP account
 username: \<your project ghost extension\>
 password: \<your project ghost password\>
-domain: \<ask a team member for the domain\>
+domain: \<domain\>
 port: 35061
 
 Change only the following settings in the SIP account, and leave the others unchanged in your client:
 
 NAT Traversal:
-STUN Server: \<ask a team member for STUN server info\>
-STUN Port: 443
+STUN Server: \<STUN server info\>
+STUN Port: \<STUN server port\>
 
 Encryption/Secure Calls:
 SRTP: Enabled/Best Effort
-DTLS: Enabled/Best Effort (this option is not in Zoiper)
+DTLS: Enabled/Best Effort
 
 Audio Codecs:
 Drag g.711 ulaw to the top, it is the only one that is used
 
 On your XMPP client, register a new account using your 10-digit number on the network:
 
-JID: \<your 10-digit number\>@\<ask a team member for XMPP server\>
+JID: \<your 10-digit number\>@\<XMPP server\>
 Password: \<your project ghost password\>
 
 You will receive SMS/MMS/voicemail here, and you will also be able to message dossi. dossi will message you a background check on any call that comes in.
@@ -180,40 +180,62 @@ You: 8542 Sorry, wrong number
 
 ## Running a ghostdial server
 
-The ghostdial backend consists of the following components
+Create an account at [https://voip.ms](https://voip.ms) and enable API usage for the IP address you will run project ghost from. You will need the API password in your project ghost .env file.
 
-- redis
-- asterisk (SIP/telephony server)
-  - ghostdial/extensions.lua (LUA script that defines how inbound / outbound calls are handled)
-- prosody (XMPP server)
-  - ghostdial/prosody_mod_sms (translates SMS/MMS from the Redis pipeline into XMPP messages)
-- ghostdial/sms_pipeline (nodejs process which sends SMS/MMS between Redis and an external VoIP service)
-- ghostdial/voicemail_pipeline (nodejs process which retrieves voicemail from asterisk, uploads to IPFS, uses Google Cloud to transcribe the audio into a written message, then forwards the transcript and audio file as an XMPP message to the user's telephone number as it is registered on prosody)
-- ghostdial/dossi (nodejs process for intelligence support in the XMPP service)
-- coturn (Used for NAT traversal)
+Create a SIP subaccount in the voip.ms UI and configure it such that voip.ms does not set callerid for you. You will need the password in your project ghost .env file.
 
-Run these on a VPS using the files included in this repo, and connect using SIP or XMPP
+Create a gcloud account and serviceaccount.json with full permissions.
 
-## Running in Docker
+Create a storage bucket on gcloud and record the name for it.
+
+Create a Twilio trial account and record the SID / account key.
+
+Ensure that docker and docker-compose are available on the system.
 
 ```sh
-docker build -t ghostdial .
-docker run -it ghostdial
+git clone https://github.com/ghostdial/ghostdial
 ```
 
-Supply environment variables:
+Create an .env file in the `ghostdial/` directory with contents as follows:
 
-- VOIPMS_USERNAME
-- VOIPMS_PASSWORD
-- DOMAIN
-- VOIPMS_SUBACCOUNT
-- VOIPMS_POP
-- TWILIO_ACCOUNT_SID
-- TWILIO_AUTH_TOKEN
-- INFURA_PROJECT_ID
-- INFURA_PROJECT_SECRET
+```
+EXTERNIP=<public IP address of server>
+EMAIL=<email to be used with certbot>
+VOIPMS_SIP_USERNAME=<sip subaccount>
+VOIPMS_SIP_PASSWORD=<sip subaccount password>
+VOIPMS_SIP_HOST=208.100.60.17
+VOIPMS_SIP_PORT=5060
+VOIPMS_SIP_PROTOCOL=udp
+TWILIO_ACCOUNT_SID=<twilio account SID>
+TWILIO_AUTH_TOKEN=<twilio auth token>
+VOICEMAIL_BUCKET=<name of gcloud storage bucket for voicemail>
+PROJECT_GHOST_DATABASE=<path to directory where ghostdial files will live>
+VOIPMS_API_USERNAME=<voipms username>
+VOIPMS_API_PASSWORD=<voipms API password>
+DOMAIN=<domain name for ghostdial server>
+ROOT_PASSWORD=<pick any root password and keep it private>
+STUN_HOST=<host coturn yourself or use a public STUN server>
+RECAPTCHA_PUBLIC_KEY=<recaptcha public key for matrix>
+RECAPTCHA_PRIVATE_KEY=<recaptcha private key for matrix>
+TURN_SHARED_SECRET=<turn shared secret>
+TURN_URI=turn:xxx.xxxx.xxx:3478?transport=udp
+```
 
-Mount a volume to /etc and /var
+Run the script:
+
+```sh
+bash ghostdial/scripts/init.sh
+```
+
+This creates the file hierarchy for the persistent ghostdial files.
+
+```sh
+cd ghostdial
+docker-compose build
+docker-compose up certbot
+docker-compose up -d
+docker-compose up -d nginx
+```
 
 ## Author
 Ghostdial LLC
