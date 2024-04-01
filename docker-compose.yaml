@@ -130,52 +130,112 @@ services:
       - gcloud:/gcloud
       - prosody:/var/lib/prosody
     restart: unless-stopped
+  postgres:
+    image: postgres
+    volumes:
+      postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=matrix
+      - POSTGRES_USER=matrix
+      - POSTGRES_INITDB_ARGS=--encoding='UTF8' --lc-collate='C' --lc-ctype='C'
+    restart: unless-stopped
+  synapse:
+    image: matrixdotorg/synapse:latest
+    volumes:
+      - synapse:/data
+    environment:
+      - SYNAPSE_SERVER_NAME=${DOMAIN}
+      - SYNAPSE_REPORT_STATS=no
+    restart: unless-stopped
+  nginx:
+    image: ghostdial/nginx
+    build:
+      context: ./services/nginx
+      dockerfile: Dockerfile
+    volumes:
+      - www-data:/usr/share/nginx/html
+    ports:
+      - 80:80
+    restart: unless-stopped
+  vaultwarden:
+    image: vaultwarden/server:latest
+    volumes:
+      - vaultwarden:/data
+    ports:
+      - 8080:80
+      - 3012:3012
+    restart: unless-stopped
 volumes:
+  postgres:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_GHOST_DATABASE}/postgres
+  synapse:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_GHOST_DATABASE}/synapse
+  vaultwarden:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_GHOST_DATABASE}/vaultwarden
+  www-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_GHOST_DATABASE}/www-data
   redis:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/redis
+      device: ${PROJECT_GHOST_DATABASE}/redis
   letsencrypt:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/letsencrypt
+      device: ${PROJECT_GHOST_DATABASE}/letsencrypt
   asterisk:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/asterisk
+      device: ${PROJECT_GHOST_DATABASE}/asterisk
   spool:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/spool
+      device: ${PROJECT_GHOST_DATABASE}/spool
   prosody:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/prosody
+      device: ${PROJECT_GHOST_DATABASE}/prosody
   gcloud:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/gcloud
+      device: ${PROJECT_GHOST_DATABASE}/gcloud
   sms_pipeline:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/sms_pipeline
+      device: ${PROJECT_GHOST_DATABASE}/sms_pipeline
   logs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${GHOSTDIAL_DATABASE}/logs
+      device: ${PROJECT_GHOST_DATABASE}/logs
