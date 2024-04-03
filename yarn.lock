@@ -2363,6 +2363,11 @@ assign-symbols@^1.0.0:
   resolved "https://registry.yarnpkg.com/assign-symbols/-/assign-symbols-1.0.0.tgz#59667f41fadd4f20ccbc2bb96b8d4f7f78ec0367"
   integrity sha512-Q+JC7Whu8HhmTdBph/Tq59IoRtoy6KAm5zzPv00WdujX82lbAL8K7WVjne7vdCsAmbF4AYaDOPyO3k0kl8qIrw==
 
+asterisk-manager@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/asterisk-manager/-/asterisk-manager-0.2.0.tgz#9fbbd790fad3ecbb23f68d1222317cf52a41235c"
+  integrity sha512-drPPaG18ZZx1+E8rSzWxzh5fmJw0poSWgsu4HHT/UWlvFmqCwtfBZILpdsDDGhD43ughWYxC0cmR7KirHDPaww==
+
 async-retry@^1.3.3:
   version "1.3.3"
   resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.3.3.tgz#0e7f36c04d8478e7a58bdbed80cedf977785f280"

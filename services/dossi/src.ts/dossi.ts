@@ -2,6 +2,7 @@
 import debug from "@xmpp/debug";
 import url from "url";
 import { client, xml } from "@xmpp/client";
+import AMI from "asterisk-manager";
 import subprocesses from "@ghostdial/subprocesses";
 import xid from "@xmpp/id";
 import pipl from "@ghostdial/pipl";
@@ -263,8 +264,10 @@ let xmpp = null;
 const from = "dossi@" + process.env.DOMAIN;
 
 const send = (msg, to) => {
+  const split = to.split('@');
+  if (split.length < 2) { split.push(process.env.DOMAIN) }
   xmpp.send(
-    xml("message", { to, from, id: xid(), type: "chat" }, xml("body", {}, msg))
+    xml("message", { to: split.join('@'), from, id: xid(), type: "chat" }, xml("body", {}, msg))
   );
 };
 
@@ -519,17 +522,44 @@ const readSipAccounts = async () => {
   return parseConfiguration(await fs.readFile('/etc/asterisk/sip.conf', 'utf8'));
 };
 
+
+export const sendAsteriskCommand = async (command) => {
+  logger.info('creating connection');
+  const connection = new AMI(process.env.AMI_PORT || '5038', process.env.AMI_HOST || 'asterisk', process.env.AMI_USER || 'admin', process.env.AMI_PASSWORD || 'admin');
+  await new Promise((resolve) => connection.on('rawevent', (evt) => {
+    if (evt.message === 'Authentication accepted') resolve(evt);
+  }));
+  logger.info('connected to AMI');
+  try {
+    logger.info('sending command: ' + command);
+    let result = await new Promise((resolve, reject) => connection.action({
+      action: 'command',
+      command: command
+    }, (err, res) => err ? reject(err) : resolve(res)));
+    logger.info('AMI response');
+    logger.info(result);
+    logger.info('closing connection');
+    connection.disconnect();
+    return result;
+  } catch (e) {
+    logger.error(e);
+    throw e;
+  }
+};
+
+
+    
+
 const writeSipAccounts = async (sipAccounts) => {
   await fs.writeFileSync('/etc/asterisk/sip.conf', buildConfiguration(sipAccounts));
-  const proc = child_process.spawn('bash', ['-c', 'asterisk -rx "sip reload"; asterisk -rx "voicemail reload"']);
-  return await new Promise<any>((resolve, reject) => proc.on('close', (code) => {
-    if (code !== 0) return reject(Error('non-zero exit code: ' + String(code)));
-    return resolve(null);
-  }));
+  await sendAsteriskCommand('sip reload');
+  await sendAsteriskCommand('voicemail reload');
+  return true;
 };
   
 
 const printDossier = async (body, to) => {
+  to = to.split('/')[0];
   if (body.substr(0, "block-voip".length).toLowerCase() === "block-voip") {
     const ext = await redis.get('extfor.', to);
     if (!ext) return;
@@ -582,12 +612,13 @@ const printDossier = async (body, to) => {
             key: match,
             value: [ pin, match, match + '@gmail.com' ] 
 	  });
+	  await writeSipAccounts(sipAccounts);
           await writeVoicemail(voicemailAccounts);
-          await redis.set('extfor.' + to, match);
+          await redis.set('extfor.' + to.split('@')[0], match);
           send('SIP password: ' + password, to);
           send('PIN: ' + pin, to);
 	} else {
-          const ext = await redis.get('extfor.' + to);
+          const ext = await redis.get('extfor.' + to.split('@')[0]);
           if (!ext) {
             send('must register a 3 digit extension first from this handle', to);
 	  } else {
@@ -604,6 +635,7 @@ const printDossier = async (body, to) => {
 	    });
             await redis.hset('devicelist.' + extAccount, match, '1');
             await redis.set('extfordevice.' + match, extAccount);
+	    await writeSipAccounts(sipAccounts);
             send('registered ' + match + ' to ' + extAccount, to);
 	  }
 	}
@@ -846,6 +878,8 @@ export async function run() {
     if (!stanza.getChild("body")) return;
     const to = stanza.attrs.from;
     let body = stanza.getChild("body").children[0].trim();
+    console.log('to: ' + to);
+    console.log(require('util').inspect(stanza));
     await printDossier(body, to);
   });
   await xmpp.start();

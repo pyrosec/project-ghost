@@ -2,5 +2,10 @@ FROM node:lts
 WORKDIR /app
 COPY . .
 RUN yarn
+RUN apt-get update && apt-get install -y python3 python3-pip git
+WORKDIR /root
+RUN bash -c 'git clone https://github.com/sherlock-project/sherlock; cd $HOME/sherlock; pip install --break-system-packages -r requirements.txt'
+RUN bash -c 'git clone https://github.com/megadose/holehe; cd holehe; pip install --break-system-packages -e .'
+RUN bash -c 'git clone https://github.com/iojw/socialscan; cd socialscan; pip install --break-system-packages -e .'
 WORKDIR /app/services/dossi
 CMD ["yarn", "start"]

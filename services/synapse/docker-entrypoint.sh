@@ -4,7 +4,7 @@ function make_secret() {
 }
 if [[ ! -f /data/env.sh ]]; then
   cat > /data/env.sh <<EOF
-export MACAROON_SHARED_SECRET=$(make_secret)
+export MACAROON_SECRET_KEY=$(make_secret)
 export FORM_SECRET=$(make_secret)
 export REGISTRATION_SHARED_SECRET=$(make_secret)
 EOF
@@ -12,5 +12,5 @@ fi
 source /data/env.sh
 cat /templates/homeserver.yaml.tpl | envsubst > ${SYNAPSE_DATA_DIR}/homeserver.yaml
 cat /templates/log.config.tpl | envsubst > ${SYNAPSE_DATA_DIR}/${SYNAPSE_SERVER_NAME}.log.config
-chmod 666 /data/homeserver.yaml
+chmod -R 777 /data
 exec python3 /start.py $@

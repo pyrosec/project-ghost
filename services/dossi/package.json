@@ -14,6 +14,7 @@
   "dependencies": {
     "@xmpp/client": "^0.12.0",
     "@xmpp/debug": "^0.13.0",
+    "asterisk-manager": "^0.2.0",
     "facebook-recover-puppeteer": "https://github.com/freelogstudio/facebook-recover-puppeteer",
     "faxvin-puppeteer": "git+https://github.com/pyrosec/faxvin-puppeteer.git",
     "fs-extra": "^10.0.0",
