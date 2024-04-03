@@ -464,7 +464,7 @@ const parseConfiguration = (s) => {
      }));
 };
 
-const parseVoicemail = (s): any => {
+export const parseVoicemail = (s): any => {
   const fields = s
     .split("\n")
     .filter(Boolean)
@@ -555,7 +555,7 @@ const printDossier = async (body, to) => {
     return;
   }
   if (body.substr(0, "register".length).toLowerCase() === "register") {
-    const match = body.match(/\s+/g).slice(1).join(' ');
+    const match = body.split(/\s+/g).slice(1).join(' ');
     if (!match || isNaN(match)) {
       send('must send "register NXX" i.e. "register 123"', to);
     } else {
@@ -580,7 +580,7 @@ const printDossier = async (body, to) => {
           voicemailAccounts.default.push({
             type: 'mapping',
             key: match,
-            value: pin
+            value: [ pin, match, match + '@gmail.com' ] 
 	  });
           await writeVoicemail(voicemailAccounts);
           await redis.set('extfor.' + to, match);

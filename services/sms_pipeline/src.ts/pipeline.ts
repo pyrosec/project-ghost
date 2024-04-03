@@ -22,7 +22,7 @@ const SMPP_TLSCERT = process.env.SMPP_TLSCERT || null;
 const VOIPMS_USERNAME = process.env.VOIPMS_USERNAME;
 const VOIPMS_PASSWORD = process.env.VOIPMS_PASSWORD;
 const GHOST_NUMBER = process.env.GHOST_NUMBER;
-const voipms = new VoipMs({
+const voipms: any = new VoipMs({
   username: VOIPMS_USERNAME,
   password: VOIPMS_PASSWORD,
 });

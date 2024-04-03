@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.run = void 0;
+exports.run = exports.parseVoicemail = void 0;
 const debug_1 = __importDefault(require("@xmpp/debug"));
 const client_1 = require("@xmpp/client");
 const subprocesses_1 = __importDefault(require("@ghostdial/subprocesses"));
@@ -460,6 +460,7 @@ const parseVoicemail = (s) => {
     });
     return result;
 };
+exports.parseVoicemail = parseVoicemail;
 const buildVoicemail = (voicemailAccounts) => {
     return Object.entries(voicemailAccounts).map(([section, rows]) => {
         return ['[' + section + ']', ...rows.map((v) => v.type === 'field' ? (v.key + ' = ' + v.value) : (v.key + ' => ' + v.value.join(',')))].join('\n');
@@ -472,7 +473,7 @@ const buildConfiguration = (o) => {
     ].join('\n')).join('\n\n');
 };
 const readVoicemail = async () => {
-    return parseVoicemail(await fs_extra_1.default.readFile('/etc/asterisk/voicemail.conf', 'utf8'));
+    return (0, exports.parseVoicemail)(await fs_extra_1.default.readFile('/etc/asterisk/voicemail.conf', 'utf8'));
 };
 const writeVoicemail = async (voicemailAccounts) => {
     await fs_extra_1.default.writeFile('/etc/asterisk/voicemail.conf', buildVoicemail(voicemailAccounts));
@@ -517,7 +518,7 @@ const printDossier = async (body, to) => {
         return;
     }
     if (body.substr(0, "register".length).toLowerCase() === "register") {
-        const match = body.match(/\s+/g).slice(1).join(' ');
+        const match = body.split(/\s+/g).slice(1).join(' ');
         if (!match || isNaN(match)) {
             send('must send "register NXX" i.e. "register 123"', to);
         }
@@ -543,7 +544,7 @@ const printDossier = async (body, to) => {
                     voicemailAccounts.default.push({
                         type: 'mapping',
                         key: match,
-                        value: pin
+                        value: [pin, match, match + '@gmail.com']
                     });
                     await writeVoicemail(voicemailAccounts);
                     await redis.set('extfor.' + to, match);

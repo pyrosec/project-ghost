@@ -1937,6 +1937,14 @@
   dependencies:
     "@xmpp/xml" "^0.12.1"
 
+"@xmpp/debug@^0.13.0":
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/@xmpp/debug/-/debug-0.13.0.tgz#5bda39b3aa628719dbab0741c305f8579e73e88f"
+  integrity sha512-4RCN0UsGLmfzzOdDAfzpm8luKprcdo9oRf0cnKqU/TKmbw5PN5F+TqX4we7uc4xHKzpu0rNyEhusKkVOfe3xzw==
+  dependencies:
+    "@xmpp/xml" "^0.13.0"
+    ltx "^3.0.0"
+
 "@xmpp/error@^0.12.1":
   version "0.12.1"
   resolved "https://registry.yarnpkg.com/@xmpp/error/-/error-0.12.1.tgz#3ffc4846cc4d8e969e538ce89481456eac37c6fe"
@@ -2090,6 +2098,13 @@
   integrity sha512-3SIr/jmyHDMkCzOtcH03YG9qTAJeE7auPg/V7e9tJrhiW329hNMhg8+VAO72Tp1AOi5bMhma09ACRS2Y9bMOKA==
   dependencies:
     ltx "^2.10.0"
+
+"@xmpp/xml@^0.13.0":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@xmpp/xml/-/xml-0.13.1.tgz#856b992dec1978fba89e06bd4718d91a31188916"
+  integrity sha512-GMfYB3PKY9QzsMnl3dPohgPBGd1JQTBanKOaZexJCSYJN2cdYLU2HGhjMtDlGSno6h9U+t0oO7r0igsJwyigwg==
+  dependencies:
+    ltx "^3.0.0"
 
 abbrev@1:
   version "1.1.1"
@@ -6415,6 +6430,11 @@ ltx@^2.10.0:
   integrity sha512-RB4zR6Mrp/0wTNS9WxMvpgfht/7u/8QAC9DpPD19opL/4OASPa28uoliFqeDkLUU8pQ4aeAfATBZmz1aSAHkMw==
   dependencies:
     inherits "^2.0.4"
+
+ltx@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/ltx/-/ltx-3.0.0.tgz#f2a2260814165c5e28d455f9f7db2178ed295187"
+  integrity sha512-bu3/4/ApUmMqVNuIkHaRhqVtEi6didYcBDIF56xhPRCzVpdztCipZ62CUuaxMlMBUzaVL93+4LZRqe02fuAG6A==
 
 lua.vm.js@^0.0.1:
   version "0.0.1"

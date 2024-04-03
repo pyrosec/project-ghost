@@ -114,6 +114,8 @@ services:
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
       - ROOT_PASSWORD=${ROOT_PASSWORD}
+    volumes:
+      - asterisk:/etc/asterisk
     restart: unless-stopped
   voicemail_pipeline:
     image: ghostdial/voicemail_pipeline
@@ -152,10 +154,7 @@ services:
     environment:
       - SYNAPSE_SERVER_NAME=${DOMAIN}
       - SYNAPSE_REPORT_STATS=no
-      - REGISTRATION_SHARED_SECRET=${REGISTRATION_SHARED_SECRET}
       - TURN_URI=${TURN_URI}
-      - FORM_SECRET=${FORM_SECRET}
-      - MACAROON_SECRET_KEY=${MACAROON_SECRET_KEY}
       - TURN_SHARED_SECRET=${TURN_SHARED_SECRET}
       - RECAPTCHA_PUBLIC_KEY=${RECAPTCHA_PUBLIC_KEY}
       - RECAPTCHA_PRIVATE_KEY=${RECAPTCHA_PRIVATE_KEY}
