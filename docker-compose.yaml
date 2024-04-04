@@ -114,6 +114,8 @@ services:
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
       - ROOT_PASSWORD=${ROOT_PASSWORD}
+      - VOIPMS_USERNAME=${VOIPMS_API_USERNAME}
+      - VOIPMS_PASSWORD=${VOIPMS_API_PASSWORD}
     volumes:
       - asterisk:/etc/asterisk
     restart: unless-stopped
