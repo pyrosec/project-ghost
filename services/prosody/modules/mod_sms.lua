@@ -419,10 +419,10 @@ end
 function sms_to_stanzas(sms)
   local result = {};
   for _, attachment in ipairs(sms.attachments or {}) do
-    table.insert(result, st.message({ from=sms.from .. '@' .. component_host, to=sms.to .. '@pyrosec.is', type='chat'  }):tag('active', { xmlns="http://jabber.org/protocol/chatstates" }):up():tag('body'):text(attachment):up():tag('x', { xmlns="jabber:x:oob" }):tag('url'):text(attachment):up():up());
+    table.insert(result, st.message({ from=sms.from .. '@' .. component_host, to=sms.to .. '@' .. os.getenv("DOMAIN"), type='chat'  }):tag('active', { xmlns="http://jabber.org/protocol/chatstates" }):up():tag('body'):text(attachment):up():tag('x', { xmlns="jabber:x:oob" }):tag('url'):text(attachment):up():up());
   end
   module:log("info", json.encode(sms.message));
-  if sms.message ~= '' then table.insert(result, st.message({ from=(sms['from'] .. '@sms.pyrosec.is'), to=(sms['to'] .. '@pyrosec.is'), type='chat' }):tag('active', { xmlns = 'http://jabber.org/protocol/chatstates' }):up():tag('body'):text(sms.message)) end
+  if sms.message ~= '' then table.insert(result, st.message({ from=(sms['from'] .. '@sms.' .. os.getenv("DOMAIN")), to=(sms['to'] .. '@' .. os.getenv("DOMAIN")), type='chat' }):tag('active', { xmlns = 'http://jabber.org/protocol/chatstates' }):up():tag('body'):text(sms.message)) end
   module:log("info", json.encode(sms));
   return result;
 end
