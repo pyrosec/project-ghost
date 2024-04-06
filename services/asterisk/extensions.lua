@@ -461,8 +461,8 @@ function sip_handler(context, extension)
       print('DIALING EXTERNAL URI ' .. uri);
       return app.dial('SIP/' .. uri);
     end
-    if #extension == 6 then
-      local extghost = extension:sub(0, 3);
+    if #extension == 7 then
+      local extghost = extension:sub(0, 4);
       local extext = extension:sub(3);
       print("DIALING EXTERNAL SYSTEM LABELED " .. extghost);
       return app.dial("SIP/" .. extghost .. "/" ..extext);
@@ -869,8 +869,8 @@ function write_sip_accounts()
 end
 
 function setup_peer_contexts ()
-  for i=1,999 do
-    local ext = string.format("%03d", i);
+  for i=1,9999 do
+    local ext = string.format("%04d", i);
     print(ext);
     extensions[ext] = {
       ["XXX"] = function (context, extension)

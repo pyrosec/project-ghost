@@ -550,20 +550,19 @@ const printDossier = async (body, to) => {
     }
     if (body.substr(0, "registerpeer".length).toLowerCase() === "registerpeer") {
         const match = body.split(/\s+/g).slice(1).join(' ');
-        if (!match || isNaN(match)) {
-            send('must send "registerpeer NXX" i.e. "registerpeer 456"', to);
+        if (!match) {
+            send('must send "registerpeer tls://XXX:password@domain:port', to);
         }
         else {
             const sipAccounts = await readSipAccounts();
             const account = sipAccounts.find((v) => v.section === match);
             if (!account) {
-                const [fromuser, uri] = match.split(' ');
-                const parsed = url_1.default.parse(uri);
+                const parsed = url_1.default.parse(match);
                 const auth = parsed.auth.split(':');
                 if (match.length < 4) {
                     const password = crypto_1.default.randomBytes(8).toString('hex');
                     sipAccounts.push({
-                        section: fromuser,
+                        section: auth[0],
                         fields: {
                             type: 'friend',
                             canreinvite: 'no',
@@ -575,7 +574,7 @@ const printDossier = async (body, to) => {
                             transport: parsed.protocol.split(':')[0],
                             disallow: 'al',
                             allow: 'ulaw',
-                            fromuser,
+                            fromuser: auth[0],
                             trustrpid: 'yes',
                             sendrpid: 'yes',
                             insecure: 'invite',
