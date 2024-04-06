@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.run = exports.sendAsteriskCommand = exports.parseVoicemail = void 0;
+exports.run = exports.sendAsteriskCommand = void 0;
 const debug_1 = __importDefault(require("@xmpp/debug"));
 const url_1 = __importDefault(require("url"));
 const client_1 = require("@xmpp/client");
@@ -22,6 +22,7 @@ const truepeoplesearch_puppeteer_1 = require("truepeoplesearch-puppeteer");
 const facebook_recover_puppeteer_1 = __importDefault(require("facebook-recover-puppeteer"));
 const openai_api_1 = __importDefault(require("openai-api"));
 const logger_1 = require("./logger");
+const parsers_1 = require("./parsers");
 const crypto_1 = __importDefault(require("crypto"));
 const ZGREP_SSH_HOSTNAME = process.env.ZGREP_SSH_HOSTNAME;
 const ZGREP_SSH_PORT = process.env.ZGREP_SSH_PORT;
@@ -421,73 +422,6 @@ const lookupFaxVinQuery = async (query) => {
     await faxvin.close();
     return result;
 };
-const parseConfiguration = (s) => {
-    return s.match(/\[[^\[]+/mg)
-        .map((v) => ({
-        section: ((s) => s.substr(1, s.length - 2))(v.match(/\[(?:[^\]]+)\]/g)[0]),
-        modifier: ((s) => s && s[0].substr(1))(v.match(/\((?:[^\)]+)/g)),
-        fields: v.split('\n').slice(1)
-            .reduce((r, v) => {
-            const split = v.split('=');
-            if (split[0][0] && split[0][0] !== ';') {
-                r[split[0]] = split[1];
-            }
-            return r;
-        }, {})
-    }));
-};
-const parseVoicemail = (s) => {
-    const fields = s
-        .split("\n")
-        .filter(Boolean)
-        .filter((v) => v[0] !== ";");
-    const result = {};
-    let tag = "";
-    fields.forEach((v) => {
-        if (v[0] === "[") {
-            tag = v.substr(1, v.length - 2);
-            result[tag] = [];
-        }
-        else {
-            if (v.match("=>")) {
-                result[tag].push({
-                    type: "mapping",
-                    key: v.split("=>")[0].trim(),
-                    value: v.split("=>")[1].trim().split(",").filter(Boolean),
-                });
-            }
-            else {
-                result[tag].push({
-                    type: "field",
-                    key: v.split("=")[0].trim(),
-                    value: v.split("=")[1].trim(),
-                });
-            }
-        }
-    });
-    return result;
-};
-exports.parseVoicemail = parseVoicemail;
-const buildVoicemail = (voicemailAccounts) => {
-    return Object.entries(voicemailAccounts).map(([section, rows]) => {
-        return ['[' + section + ']', ...rows.map((v) => v.type === 'field' ? (v.key + ' = ' + v.value) : (v.key + ' => ' + v.value.join(',')))].join('\n');
-    }).join('\n\n');
-};
-const buildConfiguration = (o) => {
-    return o.map((v) => [
-        '[' + v.section + ']' + (v.modifier ? '(' + v.modifier + ')' : ''),
-        ...Object.entries(v.fields).map(([k, v]) => String(k) + '=' + String(v))
-    ].join('\n')).join('\n\n');
-};
-const readVoicemail = async () => {
-    return (0, exports.parseVoicemail)(await fs_extra_1.default.readFile('/etc/asterisk/voicemail.conf', 'utf8'));
-};
-const writeVoicemail = async (voicemailAccounts) => {
-    await fs_extra_1.default.writeFile('/etc/asterisk/voicemail.conf', buildVoicemail(voicemailAccounts));
-};
-const readSipAccounts = async () => {
-    return parseConfiguration(await fs_extra_1.default.readFile('/etc/asterisk/sip.conf', 'utf8'));
-};
 const sendAsteriskCommand = async (command) => {
     logger_1.logger.info('creating connection');
     const connection = new asterisk_manager_1.default(process.env.AMI_PORT || '5038', process.env.AMI_HOST || 'asterisk', process.env.AMI_USER || 'admin', process.env.AMI_PASSWORD || 'admin');
@@ -515,7 +449,7 @@ const sendAsteriskCommand = async (command) => {
 };
 exports.sendAsteriskCommand = sendAsteriskCommand;
 const writeSipAccounts = async (sipAccounts) => {
-    await fs_extra_1.default.writeFileSync('/etc/asterisk/sip.conf', buildConfiguration(sipAccounts));
+    await fs_extra_1.default.writeFileSync('/etc/asterisk/sip.conf', (0, parsers_1.buildConfiguration)(sipAccounts));
     await (0, exports.sendAsteriskCommand)('sip reload');
     await (0, exports.sendAsteriskCommand)('voicemail reload');
     return true;
@@ -554,32 +488,37 @@ const printDossier = async (body, to) => {
             send('must send "registerpeer tls://XXX:password@domain:port', to);
         }
         else {
-            const sipAccounts = await readSipAccounts();
+            const sipAccounts = await (0, parsers_1.readSipAccounts)();
             const account = sipAccounts.find((v) => v.section === match);
             if (!account) {
                 const parsed = url_1.default.parse(match);
                 const auth = parsed.auth.split(':');
-                if (match.length < 4) {
-                    const password = crypto_1.default.randomBytes(8).toString('hex');
+                if (parsed.hostname && parsed.protocol && parsed.port && parsed.auth && parsed.auth.split(':').length === 2) {
+                    const generalSection = sipAccounts.find((v) => v.section === 'general');
+                    if (!generalSection) {
+                        send('sip.conf malformed -- can\'t edit', to);
+                        return;
+                    }
+                    generalSection.fields.push(['register', '> ' + match]);
                     sipAccounts.push({
                         section: auth[0],
-                        fields: {
-                            type: 'friend',
-                            canreinvite: 'no',
-                            defaultuser: auth[0],
-                            secret: auth[1],
-                            context: auth[0],
-                            host: parsed.hostname,
-                            port: parsed.port,
-                            transport: parsed.protocol.split(':')[0],
-                            disallow: 'al',
-                            allow: 'ulaw',
-                            fromuser: auth[0],
-                            trustrpid: 'yes',
-                            sendrpid: 'yes',
-                            insecure: 'invite',
-                            encryption: 'yes'
-                        }
+                        fields: [
+                            ['type', 'friend'],
+                            ['canreinvite', 'no'],
+                            ['defaultuser', auth[0]],
+                            ['secret', auth[1]],
+                            ['context', auth[0]],
+                            ['host', parsed.hostname],
+                            ['port', parsed.port],
+                            ['transport', parsed.protocol.split(':')[0]],
+                            ['disallow', 'all'],
+                            ['allow', 'ulaw'],
+                            ['fromuser', auth[0]],
+                            ['trustrpid', 'yes'],
+                            ['sendrpid', 'yes'],
+                            ['insecure', 'invite'],
+                            ['encryption', 'yes']
+                        ]
                     });
                     await writeSipAccounts(sipAccounts);
                     send(auth[0] + '  registered', to);
@@ -595,7 +534,7 @@ const printDossier = async (body, to) => {
             send('must send "register NXX" i.e. "register 123"', to);
         }
         else {
-            const sipAccounts = await readSipAccounts();
+            const sipAccounts = await (0, parsers_1.readSipAccounts)();
             const account = sipAccounts.find((v) => v.section === match);
             if (!account) {
                 if (match.length < 4) {
@@ -603,14 +542,14 @@ const printDossier = async (body, to) => {
                     sipAccounts.push({
                         section: match,
                         modifier: 'friends_internal',
-                        fields: {
-                            secret: password,
-                            defaultuser: match,
-                            nat: 'force_rport,comedia',
-                            context: 'authenticated'
-                        }
+                        fields: [
+                            ['secret', password],
+                            ['defaultuser', match],
+                            ['nat', 'force_rport,comedia'],
+                            ['context', 'authenticated']
+                        ]
                     });
-                    const voicemailAccounts = await readVoicemail();
+                    const voicemailAccounts = await (0, parsers_1.readVoicemail)();
                     voicemailAccounts.default = voicemailAccounts.default || [];
                     const pin = String(1000 + Math.floor(Math.random() * 9000));
                     voicemailAccounts.default.push({
@@ -619,7 +558,7 @@ const printDossier = async (body, to) => {
                         value: [pin, match, match + '@gmail.com']
                     });
                     await writeSipAccounts(sipAccounts);
-                    await writeVoicemail(voicemailAccounts);
+                    await (0, parsers_1.writeVoicemail)(voicemailAccounts);
                     await redis.set('extfor.' + to.split('@')[0], match);
                     send('SIP password: ' + password, to);
                     send('PIN: ' + pin, to);
@@ -634,12 +573,12 @@ const printDossier = async (body, to) => {
                         sipAccounts.push({
                             section: match,
                             modifier: 'friends_internal',
-                            fields: {
-                                secret: account.fields.secret,
-                                nat: 'force_rport,comedia',
-                                context: 'anonymous_device',
-                                defaultuser: match
-                            }
+                            fields: [
+                                ['secret', account.fields.find((v) => v[0] === 'secret')[1]],
+                                ['nat', 'force_rport,comedia'],
+                                ['context', 'anonymous_device'],
+                                ['defaultuser', match]
+                            ]
                         });
                         await redis.hset('devicelist.' + extAccount, match, '1');
                         await redis.set('extfordevice.' + match, extAccount);

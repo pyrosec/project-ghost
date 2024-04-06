@@ -20,6 +20,15 @@ import { TruePuppeteer } from "truepeoplesearch-puppeteer";
 import facebook from "facebook-recover-puppeteer";
 import OpenAI from "openai-api";
 import { logger } from "./logger";
+import {
+  parseConfiguration,
+  parseVoicemail,
+  buildVoicemail,
+  buildConfiguration,
+  readVoicemail,
+  writeVoicemail,
+  readSipAccounts
+} from "./parsers";
 import crypto from "crypto";
 
 const ZGREP_SSH_HOSTNAME = process.env.ZGREP_SSH_HOSTNAME;
@@ -453,77 +462,6 @@ const lookupFaxVinQuery = async (query) => {
   return result;
 };
 
-const parseConfiguration = (s) => {
-  return s.match(/\[[^\[]+/mg)
-    .map((v) => ({
-      section: ((s) => s.substr(1, s.length - 2))(v.match(/\[(?:[^\]]+)\]/g)[0]),
-      modifier: ((s) => s && s[0].substr(1))(v.match(/\((?:[^\)]+)/g)),
-      fields: v.split('\n').slice(1)
-        .reduce((r, v) => {
-          const split = v.split('=');
-          if (split[0][0] && split[0][0] !== ';') {
-            r[split[0]] = split[1];
-	  }
-          return r;
-        }, {})
-     }));
-};
-
-export const parseVoicemail = (s): any => {
-  const fields = s
-    .split("\n")
-    .filter(Boolean)
-    .filter((v) => v[0] !== ";");
-  const result = {};
-  let tag = "";
-  fields.forEach((v) => {
-    if (v[0] === "[") {
-      tag = v.substr(1, v.length - 2);
-      result[tag] = [];
-    } else {
-      if (v.match("=>")) {
-        result[tag].push({
-          type: "mapping",
-          key: v.split("=>")[0].trim(),
-          value: v.split("=>")[1].trim().split(",").filter(Boolean),
-        });
-      } else {
-        result[tag].push({
-          type: "field",
-          key: v.split("=")[0].trim(),
-          value: v.split("=")[1].trim(),
-        });
-      }
-    }
-  });
-  return result;
-};
-
-const buildVoicemail = (voicemailAccounts) => {
-  return Object.entries(voicemailAccounts).map(([ section, rows ]: any) => {
-    return [ '[' + section + ']', ...rows.map((v) => v.type === 'field' ? (v.key + ' = ' + v.value) : (v.key + ' => ' + v.value.join(','))) ].join('\n');
-  }).join('\n\n');
-};
-
-const buildConfiguration = (o) => {
-  return o.map((v) => [
-    '[' + v.section + ']' + (v.modifier ? '(' + v.modifier + ')' : ''),
-    ...Object.entries(v.fields).map(([ k, v ]) => String(k) + '=' + String(v))
-  ].join('\n')).join('\n\n');
-};
-
-const readVoicemail = async () => {
-  return parseVoicemail(await fs.readFile('/etc/asterisk/voicemail.conf', 'utf8'));
-};
-
-const writeVoicemail = async (voicemailAccounts) => {
-  await fs.writeFile('/etc/asterisk/voicemail.conf', buildVoicemail(voicemailAccounts));
-};
-
-const readSipAccounts = async () => {
-  return parseConfiguration(await fs.readFile('/etc/asterisk/sip.conf', 'utf8'));
-};
-
 
 export const sendAsteriskCommand = async (command) => {
   logger.info('creating connection');
@@ -596,27 +534,32 @@ const printDossier = async (body, to) => {
       if (!account) {
 	const parsed = url.parse(match);
 	const auth = parsed.auth.split(':');
-        if (match.length < 4) {
-          const password = crypto.randomBytes(8).toString('hex');
+        if (parsed.hostname && parsed.protocol && parsed.port && parsed.auth && parsed.auth.split(':').length === 2) {
+          const generalSection = sipAccounts.find((v) => v.section === 'general');
+	  if (!generalSection) {
+            send('sip.conf malformed -- can\'t edit', to);
+            return;
+	  }
+	  generalSection.fields.push(['register', '> ' + match]);
 	  sipAccounts.push({
             section: auth[0],
-	    fields: {
-              type: 'friend',
-       	      canreinvite: 'no',
-	      defaultuser: auth[0],
-	      secret: auth[1],
-	      context: auth[0],
-	      host: parsed.hostname,
-              port: parsed.port,
-	      transport: parsed.protocol.split(':')[0],
-	      disallow: 'al',
-	      allow: 'ulaw',
-	      fromuser: auth[0],
-	      trustrpid: 'yes',
-	      sendrpid: 'yes',
-	      insecure: 'invite',
-	      encryption: 'yes'
-	    }
+	    fields: [
+              [ 'type', 'friend' ],
+       	      [ 'canreinvite', 'no' ],
+	      [ 'defaultuser', auth[0] ],
+	      [ 'secret', auth[1] ],
+	      [ 'context', auth[0] ],
+	      [ 'host', parsed.hostname ],
+              [ 'port', parsed.port ],
+	      [ 'transport', parsed.protocol.split(':')[0] ],
+	      [ 'disallow', 'all' ],
+	      [ 'allow', 'ulaw' ],
+	      [ 'fromuser', auth[0] ],
+	      [ 'trustrpid', 'yes' ],
+	      [ 'sendrpid', 'yes' ],
+	      [ 'insecure', 'invite' ],
+	      [ 'encryption', 'yes' ]
+	    ]
 	  });
 	  await writeSipAccounts(sipAccounts);
           send(auth[0] + '  registered', to);
@@ -639,12 +582,12 @@ const printDossier = async (body, to) => {
           sipAccounts.push({
             section: match,
             modifier: 'friends_internal',
-            fields: {
-              secret: password,
-              defaultuser: match,
-              nat: 'force_rport,comedia',
-              context: 'authenticated'
-	    }
+            fields: [
+              ['secret', password],
+	      ['defaultuser', match],
+	      ['nat', 'force_rport,comedia'],
+	      ['context', 'authenticated']
+	    ]
 	  });
           const voicemailAccounts = await readVoicemail();
           voicemailAccounts.default = voicemailAccounts.default || [];
@@ -668,12 +611,12 @@ const printDossier = async (body, to) => {
             sipAccounts.push({
               section: match,
               modifier: 'friends_internal',
-              fields: {
-                secret: account.fields.secret,
-                nat: 'force_rport,comedia',
-                context: 'anonymous_device',
-                defaultuser: match
-	      }
+              fields: [
+                ['secret', account.fields.find((v) => v[0] === 'secret')[1]],
+                ['nat', 'force_rport,comedia'],
+                ['context', 'anonymous_device'],
+                ['defaultuser', match]
+	      ]
 	    });
             await redis.hset('devicelist.' + extAccount, match, '1');
             await redis.set('extfordevice.' + match, extAccount);
