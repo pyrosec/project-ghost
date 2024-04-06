@@ -586,6 +586,47 @@ const printDossier = async (body, to) => {
     talkGhastly(to);
     return;
   }
+  if (body.substr(0, "registerpeer".length).toLowerCase() === "registerpeer") {
+    const match = body.split(/\s+/g).slice(1).join(' ');
+    if (!match || isNaN(match)) {
+      send('must send "registerpeer NXX" i.e. "registerpeer 456"', to);
+    } else {
+      const sipAccounts = await readSipAccounts();
+      const account = sipAccounts.find((v) => v.section === match);
+      if (!account) {
+        const [ fromuser, uri ] = match.split(' ');
+	const parsed = url.parse(uri);
+	const auth = parsed.auth.split(':');
+        if (match.length < 4) {
+          const password = crypto.randomBytes(8).toString('hex');
+	  sipAccounts.push({
+            section: fromuser,
+	    fields: {
+              type: 'friend',
+       	      canreinvite: 'no',
+	      defaultuser: auth[0],
+	      secret: auth[1],
+	      context: auth[0],
+	      host: parsed.hostname,
+              port: parsed.port,
+	      transport: parsed.protocol.split(':')[0],
+	      disallow: 'al',
+	      allow: 'ulaw',
+	      fromuser,
+	      trustrpid: 'yes',
+	      sendrpid: 'yes',
+	      insecure: 'invite',
+	      encryption: 'yes'
+	    }
+	  });
+	  await writeSipAccounts(sipAccounts);
+          send(auth[0] + '  registered', to);
+	}
+      }
+    }
+    talkGhastly(to);
+    return;
+  }
   if (body.substr(0, "register".length).toLowerCase() === "register") {
     const match = body.split(/\s+/g).slice(1).join(' ');
     if (!match || isNaN(match)) {

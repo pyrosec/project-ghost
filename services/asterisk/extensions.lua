@@ -373,8 +373,6 @@ function ring_group(to)
 end
 
 function dialsip(channel, to, on_failure)
-  print(channel.callerid_num:get());
-  print('dialsip');
   local voip = is_voip(channel.callerid_num:get())
   if not is_blacklisted(channel, channel.callerid_num:get()) and not is_voip(channel.callerid_num:get())  then
     app.answer();
@@ -462,6 +460,12 @@ function sip_handler(context, extension)
     if found then
       print('DIALING EXTERNAL URI ' .. uri);
       return app.dial('SIP/' .. uri);
+    end
+    if #extension == 6 then
+      local extghost = extension:sub(0, 3);
+      local extext = extension:sub(3);
+      print("DIALING EXTERNAL SYSTEM LABELED " .. extghost);
+      return app.dial("SIP/" .. extghost .. "/" ..extext);
     end
     local custom = get_custom_extension(ext, channel.extension_with_modifiers:get());
     if custom then
@@ -863,3 +867,18 @@ function write_sip_accounts()
     end
   end
 end
+
+function setup_peer_contexts ()
+  for i=1,999 do
+    local ext = string.format("%03d", i);
+    print(ext);
+    extensions[ext] = {
+      ["XXX"] = function (context, extension)
+        set_callerid(channel, ext .. get_callerid());
+	return dialsip(channel, extension);
+      end
+    };
+  end
+end
+
+setup_peer_contexts();
