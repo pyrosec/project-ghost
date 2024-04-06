@@ -872,8 +872,12 @@ function setup_peer_contexts ()
   for i=1,9999 do
     local ext = string.format("%04d", i);
     extensions[ext] = {
-      ["XXX"] = function (context, extension)
+      ["_XXX"] = function (context, extension)
         set_callerid(channel, ext .. get_callerid());
+        channel.callerid_num = get_callerid();
+	channel.sipuser = extension;
+	channel.extension = extension;
+	channel.did = didfor(extension, nil);
 	return dialsip(channel, extension);
       end
     };
