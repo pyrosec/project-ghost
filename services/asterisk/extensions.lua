@@ -463,7 +463,7 @@ function sip_handler(context, extension)
     end
     if #extension == 7 then
       local extghost = extension:sub(0, 4);
-      local extext = extension:sub(4, 7);
+      local extext = extension:sub(5, 7);
       print("DIALING EXTERNAL SYSTEM LABELED " .. extghost);
       return app.dial("SIP/" .. extghost .. "/" ..extext);
     end
