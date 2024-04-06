@@ -291,6 +291,22 @@ Check out the file hierarchy created by the program run to familiarize yourself.
 - ghostdb/redis/ (contains the redis database)
 - ghostdb/postgres/ (contains the postgres database used for matrix-synapse)
 
+## Running project-ghost behind NAT
+
+To run project-ghost on your home server, you just have to port forward the following TCP ports:
+
+- 35061
+- 443
+- 80
+- 5222
+- 5223
+- 5347
+- 5269
+- 5280
+- 5281
+
+You must also port forward the UDP port range 30000-30099
+
 ## Piloting your deployment
 
 If your domain is `myghostserver.is` then you can use Conversations or any XMPP client to message dossi@myghostserver.is from an XMPP account you create on myghostserver.is.
