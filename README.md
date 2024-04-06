@@ -379,6 +379,15 @@ Once this is done, asterisk will reload its configuration, and that 4 digit numb
 
 It is convenient to set custom extensions to folks you call often once your routing table is built for all the peer project ghost deployments you wish to dial extensions on.
 
+### Using vaultwarden and synapse
+
+Project ghost deploys a reverse proxy that combines vaultwarden, a self-hosted password manager compatible with the Bitwarden application and browser extension, as well as synapse, the matrix server implementation.
+
+To use these, you can navigate directly to the domain you configured to access the vaultwarden instance. You will want to install the Bitwarden mobile app or browser extension, and prior to account creation/login, configure Region to Self-hosted then input `https://<your domain>` as the server URL. Then you get all the paid features of Bitwarden, including team password management and 2FA, for free.
+
+Install Element Secure Messenger on desktop and mobile. Create an account using your server as the custom homeserver.
+
+Message me at @reyes:matrix.pyrosec.is if you would like to speak to me.
 
 ## Author
 Pyrosec Labs
