@@ -104,7 +104,6 @@ function cleanBox(extension) {
     files.forEach((v) => {
         fs_extra_1.default.unlinkSync(path_1.default.join(voicemailDirectory, extension, 'INBOX', v));
     });
-    logger_1.logger.info(extension + ': cleaned!');
 }
 ;
 async function run() {
