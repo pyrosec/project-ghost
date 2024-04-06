@@ -871,7 +871,6 @@ end
 function setup_peer_contexts ()
   for i=1,9999 do
     local ext = string.format("%04d", i);
-    print(ext);
     extensions[ext] = {
       ["XXX"] = function (context, extension)
         set_callerid(channel, ext .. get_callerid());
