@@ -27,7 +27,7 @@ import {
   buildConfiguration,
   readVoicemail,
   writeVoicemail,
-  readSipAccounts
+  readSipAccounts,
 } from "./parsers";
 import crypto from "crypto";
 
@@ -38,18 +38,19 @@ const ZGREP_SSH_IDENTITY =
   path.join(process.env.HOME, ".ssh", "id_rsa");
 const ZGREP_SSH_USER = process.env.ZGREP_SSH_USER;
 const ZGREP_DIR = process.env.ZGREP_DIR;
-const VOIPMS_SUBACCOUNT = process.env.VOIPMS_SUBACCOUNT || process.env.VOIPMS_SIP_USERNAME;
-const VOIPMS_POP = process.env.VOIPMS_POP || 'atlanta1.voip.ms';
+const VOIPMS_SUBACCOUNT =
+  process.env.VOIPMS_SUBACCOUNT || process.env.VOIPMS_SIP_USERNAME;
+const VOIPMS_POP = process.env.VOIPMS_POP || "atlanta1.voip.ms";
 const ZGREP_MAX_RESULTS = Number(process.env.ZGREP_MAX_RESULTS || 1000);
 const FAXVIN_DEFAULT_STATE = process.env.FAXVIN_DEFAULT_STATE;
 
-const openai = new OpenAI(process.env.OPENAI_API_KEY || '') as any;
+const openai = new OpenAI(process.env.OPENAI_API_KEY || "") as any;
 const answerQuestion = async (question, to) => {
   const documents = [];
-  const context = await redis.get('context.' + to);
+  const context = await redis.get("context." + to);
   if (context) documents.push(context);
-  else documents.push('The year is 2022.');
-  let temperature = Number(await redis.get('temperature.' + to) || 0.9);
+  else documents.push("The year is 2022.");
+  let temperature = Number((await redis.get("temperature." + to)) || 0.9);
   if (isNaN(temperature)) temperature = 0.9;
   const gptResponse = await openai.answers({
     documents,
@@ -57,8 +58,22 @@ const answerQuestion = async (question, to) => {
     temperature,
     search_model: "davinci",
     model: "davinci",
-    examples_context: "The Scarlet Letter by Nathaniel Hawthorne, adulteress Hester Prynne must wear a scarlet A to mark her shame. Her lover, Arthur Dimmesdale, remains unidentified and is wracked with guilt, while her husband, Roger Chillingworth, seeks revenge. The Scarlet Letter's symbolism helps create a powerful drama in Puritan Boston: a kiss, evil, sin, nature, the scarlet letter, and the punishing scaffold. Nathaniel Hawthorne's masterpiece is a classic example of the human conflict between emotion and intellect.",
-    examples: [["What is the reason women would have to wear a scarlet A embroidered on their clothing in Puritan Boston?", "They would wear the scarlet A if they committed adultery."], ["What is the surname of the unidentified man who Hester cheated on Roger with?", "The unidentified man is named Dimmesdale."], ["What should I say to Hester?", "Don't worry about the haters. Roger is a trick, and there's no proof adultery is a sin."]],
+    examples_context:
+      "The Scarlet Letter by Nathaniel Hawthorne, adulteress Hester Prynne must wear a scarlet A to mark her shame. Her lover, Arthur Dimmesdale, remains unidentified and is wracked with guilt, while her husband, Roger Chillingworth, seeks revenge. The Scarlet Letter's symbolism helps create a powerful drama in Puritan Boston: a kiss, evil, sin, nature, the scarlet letter, and the punishing scaffold. Nathaniel Hawthorne's masterpiece is a classic example of the human conflict between emotion and intellect.",
+    examples: [
+      [
+        "What is the reason women would have to wear a scarlet A embroidered on their clothing in Puritan Boston?",
+        "They would wear the scarlet A if they committed adultery.",
+      ],
+      [
+        "What is the surname of the unidentified man who Hester cheated on Roger with?",
+        "The unidentified man is named Dimmesdale.",
+      ],
+      [
+        "What should I say to Hester?",
+        "Don't worry about the haters. Roger is a trick, and there's no proof adultery is a sin.",
+      ],
+    ],
     max_tokens: 200,
     stop: ["\n", "<|endoftext|>"],
   });
@@ -75,7 +90,7 @@ const sendResults = async (results, query, to) => {
   }
 };
 const sendLinkedInResults = async (results, query, to) => {
-  const lines = results.split("\n").map((v) => v.substr(v.indexOf('{')));
+  const lines = results.split("\n").map((v) => v.substr(v.indexOf("{")));
   const chunks = lodash.chunk(lines, 50);
   for (const chunk of chunks) {
     send(chunk.join("\n"), to);
@@ -91,24 +106,26 @@ const searchDIDs = async (query) => {
 
 const orderDID = async (number, sourceDid) => {
   const vms = VoipMs.fromEnv();
-  const ext = await redis.get('extfor.' + sourceDid);
+  const ext = await redis.get("extfor." + sourceDid);
   const { servers } = await vms.getServersInfo.get();
-  const { server_pop } = servers.find((v) => v.server_hostname === (VOIPMS_POP || 'atlanta1.voip.ms'));
+  const { server_pop } = servers.find(
+    (v) => v.server_hostname === (VOIPMS_POP || "atlanta1.voip.ms"),
+  );
   const payload = {
     did: number,
-    routing: 'account:' + VOIPMS_SUBACCOUNT,
+    routing: "account:" + VOIPMS_SUBACCOUNT,
     pop: server_pop,
     dialtime: 60,
     cnam: 1,
-    billing_type: 1
+    billing_type: 1,
   };
   logger.info(await vms.orderDID.get(payload));
   const smsPayload = {
     did: number,
-    enable: 1
+    enable: 1,
   };
   logger.info(await vms.setSMS.get(smsPayload));
-  await redis.set('extfor.' + number, ext);
+  await redis.set("extfor." + number, ext);
 };
 
 const runLinkedIn = (query, to) => {
@@ -134,7 +151,9 @@ const runLinkedIn = (query, to) => {
             stream.stderr.setEncoding("utf8");
             stream.stderr.on("data", (data) => logger.error(data));
             stream.on("data", (_data) => {
-              sendLinkedInResults(_data, query, to).catch((err) => logger.error(err));
+              sendLinkedInResults(_data, query, to).catch((err) =>
+                logger.error(err),
+              );
             });
             stream.on("close", (code, signal) => {
               client.end();
@@ -142,7 +161,7 @@ const runLinkedIn = (query, to) => {
               logger.info(data);
               resolve("");
             });
-          }
+          },
         );
       })
       .connect({
@@ -185,7 +204,7 @@ const runZgrep = (query, to) => {
               logger.info(data);
               resolve("");
             });
-          }
+          },
         );
       })
       .connect({
@@ -228,7 +247,7 @@ const runZgrepFull = (query, to) => {
               logger.info(data);
               resolve("");
             });
-          }
+          },
         );
       })
       .connect({
@@ -240,17 +259,16 @@ const runZgrepFull = (query, to) => {
   });
 };
 
-
 const piplQueryToObject = (query) => {
   try {
     return query
       .match(/([^\s:]+):((?:"((?:[^"\\]|\\[\s\S])*)")|(?:\S+))/g)
       .map((v) =>
-        v.split(":").map((v) => (v.substr(0, 1) === '"' ? JSON.parse(v) : v))
+        v.split(":").map((v) => (v.substr(0, 1) === '"' ? JSON.parse(v) : v)),
       )
       .reduce((r, [key, value]) => {
-      r[key] = value;
-      return r;
+        r[key] = value;
+        return r;
       }, {});
   } catch (e) {
     return {};
@@ -275,10 +293,16 @@ let xmpp = null;
 const from = "dossi@" + process.env.DOMAIN;
 
 const send = (msg, to) => {
-  const split = to.split('@');
-  if (split.length < 2) { split.push(process.env.DOMAIN) }
+  const split = to.split("@");
+  if (split.length < 2) {
+    split.push(process.env.DOMAIN);
+  }
   xmpp.send(
-    xml("message", { to: split.join('@'), from, id: xid(), type: "chat" }, xml("body", {}, msg))
+    xml(
+      "message",
+      { to: split.join("@"), from, id: xid(), type: "chat" },
+      xml("body", {}, msg),
+    ),
   );
 };
 
@@ -305,8 +329,8 @@ const sendPiplImagesForPerson = async (person, i, to) => {
         "message",
         { to, from, id: xid(), type: "chat" },
         xml("body", {}, image.url) +
-          xml("x", { xmlns: "jabber:x:oob" }, xml("url", {}, image.url))
-      )
+          xml("x", { xmlns: "jabber:x:oob" }, xml("url", {}, image.url)),
+      ),
     );
   }
 };
@@ -320,12 +344,13 @@ const sendPiplImages = async (fromPipl, to) => {
 };
 
 const printPiplResult = async (search, result, to) => {
-  if (!result.possible_persons) return send('no results found', to);
+  if (!result.possible_persons) return send("no results found", to);
   result.possible_persons.forEach((v) => {
     delete v["@search_pointer"];
   });
   const summary = { ...result };
-  const data = JSON.stringify(summary, null, 2);  await new Promise((resolve, reject) => setTimeout(resolve, 1000));
+  const data = JSON.stringify(summary, null, 2);
+  await new Promise((resolve, reject) => setTimeout(resolve, 1000));
 
   send(data, to);
   await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -400,7 +425,7 @@ const deleteNullKeys = (o) => {
   return result;
 };
 
-const redis = new Redis(process.env.REDIS_URI || 'redis://127.0.0.1:6379');
+const redis = new Redis(process.env.REDIS_URI || "redis://127.0.0.1:6379");
 
 const timeout = (n) => new Promise((resolve) => setTimeout(resolve, n));
 const POLL_INTERVAL = 500;
@@ -438,7 +463,14 @@ const callerId = async (number, to) => {
 };
 
 const lookupTruePeopleSearchQuery = async (query) => {
-  const truepeoplesearch = await TruePuppeteer.initialize({ noSandbox: true, logger: { info(v) { logger.info(v); } } }) as TruePuppeteer;
+  const truepeoplesearch = (await TruePuppeteer.initialize({
+    noSandbox: true,
+    logger: {
+      info(v) {
+        logger.info(v);
+      },
+    },
+  })) as TruePuppeteer;
   let result = null;
   if (query.match(/^\d+$/)) {
     result = await truepeoplesearch.searchPhone({ phone: query } as any);
@@ -455,30 +487,48 @@ const lookupTruePeopleSearchQuery = async (query) => {
 };
 
 const lookupFaxVinQuery = async (query) => {
-  const faxvin = await FaxvinPuppeteer.initialize({ noSandbox: true, logger: { info(v) { logger.info(v); } } }) as FaxvinPuppeteer;
+  const faxvin = (await FaxvinPuppeteer.initialize({
+    noSandbox: true,
+    logger: {
+      info(v) {
+        logger.info(v);
+      },
+    },
+  })) as FaxvinPuppeteer;
   const processed = piplQueryToObject(query);
   const result = await faxvin.searchPlate(query);
   await faxvin.close();
   return result;
 };
 
-
 export const sendAsteriskCommand = async (command) => {
-  logger.info('creating connection');
-  const connection = new AMI(process.env.AMI_PORT || '5038', process.env.AMI_HOST || 'asterisk', process.env.AMI_USER || 'admin', process.env.AMI_PASSWORD || 'admin');
-  await new Promise((resolve) => connection.on('rawevent', (evt) => {
-    if (evt.message === 'Authentication accepted') resolve(evt);
-  }));
-  logger.info('connected to AMI');
+  logger.info("creating connection");
+  const connection = new AMI(
+    process.env.AMI_PORT || "5038",
+    process.env.AMI_HOST || "asterisk",
+    process.env.AMI_USER || "admin",
+    process.env.AMI_PASSWORD || "admin",
+  );
+  await new Promise((resolve) =>
+    connection.on("rawevent", (evt) => {
+      if (evt.message === "Authentication accepted") resolve(evt);
+    }),
+  );
+  logger.info("connected to AMI");
   try {
-    logger.info('sending command: ' + command);
-    let result = await new Promise((resolve, reject) => connection.action({
-      action: 'command',
-      command: command
-    }, (err, res) => err ? reject(err) : resolve(res)));
-    logger.info('AMI response');
+    logger.info("sending command: " + command);
+    let result = await new Promise((resolve, reject) =>
+      connection.action(
+        {
+          action: "command",
+          command: command,
+        },
+        (err, res) => (err ? reject(err) : resolve(res)),
+      ),
+    );
+    logger.info("AMI response");
     logger.info(result);
-    logger.info('closing connection');
+    logger.info("closing connection");
     connection.disconnect();
     return result;
   } catch (e) {
@@ -487,90 +537,131 @@ export const sendAsteriskCommand = async (command) => {
   }
 };
 
-
-    
-
 const writeSipAccounts = async (sipAccounts) => {
-  await fs.writeFileSync('/etc/asterisk/sip.conf', buildConfiguration(sipAccounts));
-  await sendAsteriskCommand('sip reload');
-  await sendAsteriskCommand('voicemail reload');
+  await fs.writeFileSync(
+    "/etc/asterisk/sip.conf",
+    buildConfiguration(sipAccounts),
+  );
+  await sendAsteriskCommand("sip reload");
+  await sendAsteriskCommand("voicemail reload");
   return true;
 };
-  
 
 const printDossier = async (body, to) => {
-  to = to.split('/')[0];
+  to = to.split("/")[0];
   if (body.substr(0, "block-voip".length).toLowerCase() === "block-voip") {
-    const ext = await redis.get('extfor.', to);
+    const ext = await redis.get("extfor.", to);
     if (!ext) return;
-    await redis.del('voip-passthrough.' + ext);
+    await redis.del("voip-passthrough." + ext);
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "unblock-voip".length).toLowerCase() === "unblock-voip") {
-    const ext = await redis.get('extfor.', to);
+    const ext = await redis.get("extfor.", to);
     if (!ext) return;
-    await redis.set('voip-passthrough.' + ext, '1');
+    await redis.set("voip-passthrough." + ext, "1");
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "ghostem".length).toLowerCase() === "ghostem") {
-    await redis.set('ghostem.' + to, '1');
+    await redis.set("ghostem." + to, "1");
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "unghostem".length).toLowerCase() === "unghostem") {
-    await redis.del('ghostem.' + to);
+    await redis.del("ghostem." + to);
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "registerpeer".length).toLowerCase() === "registerpeer") {
-    const match = body.split(/\s+/g).slice(1).join(' ');
+    const match = body.split(/\s+/g).slice(1).join(" ");
     if (!match) {
       send('must send "registerpeer tls://XXX:password@domain:port', to);
     } else {
       const sipAccounts = await readSipAccounts();
       const account = sipAccounts.find((v) => v.section === match);
       if (!account) {
-	const parsed = url.parse(match);
-	const auth = parsed.auth.split(':');
-        if (parsed.hostname && parsed.protocol && parsed.port && parsed.auth && parsed.auth.split(':').length === 2) {
-          const generalSection = sipAccounts.find((v) => v.section === 'general');
-	  if (!generalSection) {
-            send('sip.conf malformed -- can\'t edit', to);
+        const parsed = url.parse(match);
+        const auth = parsed.auth.split(":");
+        if (
+          parsed.hostname &&
+          parsed.protocol &&
+          parsed.port &&
+          parsed.auth &&
+          parsed.auth.split(":").length === 2
+        ) {
+          const generalSection = sipAccounts.find(
+            (v) => v.section === "general",
+          );
+          if (!generalSection) {
+            send("sip.conf malformed -- can't edit", to);
             return;
-	  }
-	  generalSection.fields.push(['register', '> ' + match]);
-	  sipAccounts.push({
+          }
+          generalSection.fields.push(["register", "> " + match]);
+          sipAccounts.push({
             section: auth[0],
-	    fields: [
-              [ 'type', 'friend' ],
-       	      [ 'canreinvite', 'no' ],
-	      [ 'defaultuser', auth[0] ],
-	      [ 'secret', auth[1] ],
-	      [ 'context', auth[0] ],
-	      [ 'host', parsed.hostname ],
-              [ 'port', parsed.port ],
-	      [ 'transport', parsed.protocol.split(':')[0] ],
-	      [ 'disallow', 'all' ],
-	      [ 'allow', 'ulaw' ],
-	      [ 'fromuser', auth[0] ],
-	      [ 'trustrpid', 'yes' ],
-	      [ 'sendrpid', 'yes' ],
-	      [ 'insecure', 'invite' ],
-	      [ 'encryption', 'yes' ]
-	    ]
-	  });
-	  await writeSipAccounts(sipAccounts);
-          send(auth[0] + '  registered', to);
-	}
+            fields: [
+              ["type", "friend"],
+              ["canreinvite", "no"],
+              ["defaultuser", auth[0]],
+              ["secret", auth[1]],
+              ["context", auth[0]],
+              ["host", parsed.hostname],
+              ["port", parsed.port],
+              ["transport", parsed.protocol.split(":")[0]],
+              ["disallow", "all"],
+              ["allow", "ulaw"],
+              ["fromuser", auth[0]],
+              ["trustrpid", "yes"],
+              ["sendrpid", "yes"],
+              ["insecure", "invite"],
+              ["encryption", "yes"],
+            ],
+          });
+          await writeSipAccounts(sipAccounts);
+          send(auth[0] + "  registered", to);
+        }
+      }
+    }
+    talkGhastly(to);
+    return;
+  }
+  if (body.substr(0, "createpeer".length).toLowerCase() === "createpeer") {
+    const match = body.split(/\s+/g).slice(1).join(" ");
+    if (!match || match.length !== 4) {
+      send('must send "createpeer XXXX', to);
+    } else {
+      const sipAccounts = await readSipAccounts();
+      const account = sipAccounts.find((v) => v.section === match);
+      if (!account) {
+        const secret = crypto.randomBytes(8).toString("hex");
+        sipAccounts.push({
+          section: match,
+          fields: [
+            ["defaultuser", match],
+            ["secret", secret],
+            ["context", match],
+            ["nat", "no"],
+          ],
+        });
+        await writeSipAccounts(sipAccounts);
+        send(
+          "registerpeer tls://" +
+            match +
+            ":" +
+            secret +
+            "@" +
+            process.env.DOMAIN +
+            ":35061",
+          to,
+        );
       }
     }
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "register".length).toLowerCase() === "register") {
-    const match = body.split(/\s+/g).slice(1).join(' ');
+    const match = body.split(/\s+/g).slice(1).join(" ");
     if (!match || isNaN(match)) {
       send('must send "register NXX" i.e. "register 123"', to);
     } else {
@@ -578,54 +669,57 @@ const printDossier = async (body, to) => {
       const account = sipAccounts.find((v) => v.section === match);
       if (!account) {
         if (match.length < 4) {
-          const password = crypto.randomBytes(8).toString('hex');
+          const password = crypto.randomBytes(8).toString("hex");
           sipAccounts.push({
             section: match,
-            modifier: 'friends_internal',
+            modifier: "friends_internal",
             fields: [
-              ['secret', password],
-	      ['defaultuser', match],
-	      ['nat', 'force_rport,comedia'],
-	      ['context', 'authenticated']
-	    ]
-	  });
+              ["secret", password],
+              ["defaultuser", match],
+              ["nat", "force_rport,comedia"],
+              ["context", "authenticated"],
+            ],
+          });
           const voicemailAccounts = await readVoicemail();
           voicemailAccounts.default = voicemailAccounts.default || [];
-          const pin = String(1000 + Math.floor(Math.random()*9000));
+          const pin = String(1000 + Math.floor(Math.random() * 9000));
           voicemailAccounts.default.push({
-            type: 'mapping',
+            type: "mapping",
             key: match,
-            value: [ pin, match, match + '@gmail.com' ] 
-	  });
-	  await writeSipAccounts(sipAccounts);
+            value: [pin, match, match + "@gmail.com"],
+          });
+          await writeSipAccounts(sipAccounts);
           await writeVoicemail(voicemailAccounts);
-          await redis.set('extfor.' + to.split('@')[0], match);
-          send('SIP password: ' + password, to);
-          send('PIN: ' + pin, to);
-	} else {
-          const ext = await redis.get('extfor.' + to.split('@')[0]);
+          await redis.set("extfor." + to.split("@")[0], match);
+          send("SIP password: " + password, to);
+          send("PIN: " + pin, to);
+        } else {
+          const ext = await redis.get("extfor." + to.split("@")[0]);
           if (!ext) {
-            send('must register a 3 digit extension first from this handle', to);
-	  } else {
+            send(
+              "must register a 3 digit extension first from this handle",
+              to,
+            );
+          } else {
             const extAccount = sipAccounts.find((v) => v.section === ext);
             sipAccounts.push({
               section: match,
-              modifier: 'friends_internal',
+              modifier: "friends_internal",
               fields: [
-                ['secret', account.fields.find((v) => v[0] === 'secret')[1]],
-                ['nat', 'force_rport,comedia'],
-                ['context', 'anonymous_device'],
-                ['defaultuser', match]
-	      ]
-	    });
-            await redis.hset('devicelist.' + extAccount, match, '1');
-            await redis.set('extfordevice.' + match, extAccount);
-	    await writeSipAccounts(sipAccounts);
-            send('registered ' + match + ' to ' + extAccount, to);
-	  }
-	}
+                ["secret", account.fields.find((v) => v[0] === "secret")[1]],
+                ["nat", "force_rport,comedia"],
+                ["context", "anonymous_device"],
+                ["defaultuser", match],
+              ],
+            });
+            await redis.hset("devicelist." + extAccount, match, "1");
+            await redis.set("extfordevice." + match, extAccount);
+            await writeSipAccounts(sipAccounts);
+            send("registered " + match + " to " + extAccount, to);
+          }
+        }
       } else {
-        send('already registered', to);
+        send("already registered", to);
       }
     }
     talkGhastly(to);
@@ -697,13 +791,19 @@ const printDossier = async (body, to) => {
     }
     return;
   }
-  if (body.substr(0, "truepeoplesearch".length).toLowerCase() === "truepeoplesearch") {
+  if (
+    body.substr(0, "truepeoplesearch".length).toLowerCase() ===
+    "truepeoplesearch"
+  ) {
     const match = body.match(/^truepeoplesearch\s+(.*$)/i);
     if (match) {
       const search = match[1];
       send("truepeoplesearch-puppeteer " + search, to);
       send("wait for complete ...", to);
-      send(JSON.stringify(await lookupTruePeopleSearchQuery(search), null, 2), to);
+      send(
+        JSON.stringify(await lookupTruePeopleSearchQuery(search), null, 2),
+        to,
+      );
       talkGhastly(to);
     }
     return;
@@ -714,7 +814,10 @@ const printDossier = async (body, to) => {
       const search = match[1];
       send("facebook-recover-puppeteer " + search, to);
       send("wait for complete ...", to);
-      send(JSON.stringify(await facebook.lookupPhone({ phone: search }), null, 2), to);
+      send(
+        JSON.stringify(await facebook.lookupPhone({ phone: search }), null, 2),
+        to,
+      );
       talkGhastly(to);
     }
     return;
@@ -725,29 +828,29 @@ const printDossier = async (body, to) => {
       const search = match[1];
       send("ghostmaker donotcall " + search, to);
       send("wait for complete ...", to);
-      await (require('/root/ghostmaker')).addToDoNotCall(search);
+      await require("/root/ghostmaker").addToDoNotCall(search);
       talkGhastly(to);
     }
     return;
   }
-  if (body.substr(0, "searchdids".length).toLowerCase() === 'searchdids') {
+  if (body.substr(0, "searchdids".length).toLowerCase() === "searchdids") {
     const match = body.match(/^searchdids\s+(.*$)/i);
     if (match) {
       const search = match[1];
       send("searchdids " + search, to);
-      const dids = (await searchDIDs(search)).join(', ');
+      const dids = (await searchDIDs(search)).join(", ");
       send(dids, to);
     }
     return;
   }
-  if (body.substr(0, "orderdid".length).toLowerCase() === 'orderdid') {
+  if (body.substr(0, "orderdid".length).toLowerCase() === "orderdid") {
     const match = body.match(/^orderdid\s+(.*$)/i);
     if (match) {
       const search = match[1];
       send("orderdid " + search, to);
       try {
-        await orderDID(search, to.split('@')[0])
-        send('added!', to);
+        await orderDID(search, to.split("@")[0]);
+        send("added!", to);
       } catch (e) {
         send(e.message, to);
       }
@@ -787,7 +890,7 @@ const printDossier = async (body, to) => {
         return;
       } else if (search.indexOf("@") !== -1) {
         const data = await pipl.search({ email: search });
-	      logger.info(data);
+        logger.info(data);
         await printPiplResult(search, data, to);
         return;
       } else if (search.match(/\d+/)) {
@@ -810,7 +913,7 @@ const printDossier = async (body, to) => {
     body = "+1" + body;
     const twilioResults = await twilioLookup(body);
     const peopleDataLabsResults = deleteNullKeys(
-      await peopledatalabs.personEnrich({ phone: body })
+      await peopledatalabs.personEnrich({ phone: body }),
     );
     send(JSON.stringify({ twilioResults, peopleDataLabsResults }, null, 2), to);
     send("good luck ghost", to);
@@ -820,31 +923,30 @@ const printDossier = async (body, to) => {
       JSON.stringify(
         await personEnrich(first_name, last_name, region),
         null,
-        2
+        2,
       ),
-      to
+      to,
     );
     talkGhastly(to);
   } else if (body.match(/^(?:SELECT|next)/g)) {
     await personSearch(to, body);
     talkGhastly(to);
   }
-  if (body.substr(0, 'context:'.length) === 'context:') {
-    await redis.set('context.' + to, body.substr('context:'.length));
-    send('set', to);
+  if (body.substr(0, "context:".length) === "context:") {
+    await redis.set("context." + to, body.substr("context:".length));
+    send("set", to);
     return;
   }
-  if (body.substr(0, 'temperature:'.length) === 'temperature:') {
-    await redis.set('temperature.' + to, body.substr('context:'.length));
-    send('set', to);
+  if (body.substr(0, "temperature:".length) === "temperature:") {
+    await redis.set("temperature." + to, body.substr("context:".length));
+    send("set", to);
     return;
   }
-  if (body.substr(0, 'answer:'.length) === 'answer:') {
-    await answerQuestion(body.substr('answer:'.length), to);
+  if (body.substr(0, "answer:".length) === "answer:") {
+    await answerQuestion(body.substr("answer:".length), to);
     return;
   }
 };
-
 
 export async function run() {
   xmpp = client({
@@ -863,8 +965,8 @@ export async function run() {
     if (!stanza.getChild("body")) return;
     const to = stanza.attrs.from;
     let body = stanza.getChild("body").children[0].trim();
-    console.log('to: ' + to);
-    console.log(require('util').inspect(stanza));
+    console.log("to: " + to);
+    console.log(require("util").inspect(stanza));
     await printDossier(body, to);
   });
   await xmpp.start();

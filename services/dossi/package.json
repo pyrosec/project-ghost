@@ -10,6 +10,7 @@
   "scripts": {
     "start": "cross-env node bin/dossi",
     "build": "tsc",
+    "prettier": "prettier --write ./src.ts/**/*.ts",
     "test": "cross-env ts-mocha tests/*.spec.ts"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "cross-env": "^7.0.3",
     "mocha": "^10.4.0",
     "nice-repl": "^0.1.2",
+    "prettier": "^3.2.5",
     "ts-mocha": "^10.0.0",
     "typescript": "^5.3.3"
   }
