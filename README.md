@@ -218,6 +218,12 @@ Get recaptcha API keys for your domain. The procedure is simple:
 
 Create the keys here [https://www.google.com/recaptcha/admin/create](https://www.google.com/recaptcha/admin/create). Set the label to anything you want. Set the type to reCAPTCHA v2 using the "I'm not a robot" Checkbox option (this is the only thing that will work with synapse). Go to the settings page for the CAPTCHA you just created. Uncheck the "Verify the origin of reCAPTCHA solutions" checkbox so that the captcha can be displayed in any client. If you do not disable this option then you must specify the domains of every client that is allowed to display the CAPTCHA.
 
+If you are unable, for any reason, to ascertain your public IP address to set the EXTERNIP variable to in the .env file we discuss in the next section, use the command:
+
+```sh
+curl https://ipinfo.io/json
+```
+
 Now you are ready to run project ghost on the server you have launched.
 
 Ensure that docker and docker-compose are available on the system.
