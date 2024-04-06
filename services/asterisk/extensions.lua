@@ -6,6 +6,11 @@ local json = require 'rapidjson';
 local ltn12 = require 'ltn12';
 local redis = require 'redis';
 
+
+local lua_print = print;
+function print (msg)
+  if _G.app then app.verbose(msg); else lua_print(msg); end
+end
 function split_uri(uri)
     local i = string.find(uri, ":");
     return uri:sub(0, i - 1), uri:sub(i + 1);
@@ -16,13 +21,8 @@ function connect_redis()
   return redis.connect(host, port);
 end
 
-local lua_print = print;
 
 local cache = connect_redis();
-
-local print = function (msg)
-  app.verbose(msg);
-end
 
 function dialstring(num)
   return num:gsub('%*%#', 'w'):gsub('%*%*', '*');
@@ -123,7 +123,7 @@ function pstn_fallback_dial(channel)
   local number = cache:get('fallback.' .. ext);
   if not number then return 'CHANUNAVAIL'; end
   if channel.random:get() then channel.override = random_similar_number(number); end
-  local outbound = cache:get('outbound.' .. channel.did:get()) or '297232_ghost';
+  local outbound = cache:get('outbound.' .. channel.did:get()) or os.getenv("VOIPMS_SIP_USERNAME");
   number = #number == 10 and ('1' .. number) or number;
   local callerid_num, callerid_name = channel.callerid_num:get(), channel.callerid_name:get();
   set_callerid(channel, emergency_filter(ext, coerce_to_did(callerid_num)) or callerid_num);
@@ -139,7 +139,7 @@ function pstn_fallback_dial(channel)
 end
 
 
-local DEFAULT_OUTBOUND = 'SIP/297232_ghost';
+local DEFAULT_OUTBOUND = 'SIP/' .. os.getenv("VOIPMS_SIP_USERNAME");
 
 function activate_simple_mobile(callerid, simnumber, airtime, zipcode, pin)
   channel['CALLERID(num)'] = callerid;
@@ -290,15 +290,6 @@ end
 
 function didfor(ext, to)
   if #ext > 3 then return ext; end
-  if channel.random:get() then
-    local override = channel.override:get();
-    if channel.override_changed:get() then
-      return override;
-    end
-    local random = random_similar_number(to or '8778888888');
-    channel.override = random;
-    return override;
-  end
   local inbound_didfor = channel.didfor:get();
   if inbound_didfor then
     return inbound_didfor;
@@ -307,7 +298,7 @@ function didfor(ext, to)
     local did = cache:get('didfor.' .. ext .. '.' .. to);
     if did then return did; end
   end
-  return cache:get('didfor.' .. ext) or random_similar_number(to);
+  return cache:get('didfor.' .. ext);
 end
 
 function lookup_extension(sipuser)
@@ -338,7 +329,7 @@ function dial_outbound(channel, number)
     return dial_outbound(channel, number:sub(11));
   end
   number = #number == 10 and ('1' .. number) or number;
-  local outbound = cache:get('outbound.' .. ((channel.override and channel.override:get()) or channel.did:get())) or '297232_ghost';
+  local outbound = cache:get('outbound.' .. ((channel.override and channel.override:get()) or channel.did:get())) or os.getenv("VOIPMS_SIP_USERNAME");
   if not channel.immutable_callerid:get() then set_callerid(channel, channel.override and channel.override:get() or get_last_cid(number) or channel.did:get()); end;
   if extensions.inbound[number] then return extensions.inbound[number](context, number); end
   local response = {};
@@ -737,12 +728,6 @@ extensions.authenticated_internal = {
       channel.override = override;
       return app['goto']('authenticated', cache:get('last-called.' .. get_callerid()), 1);
     end,
-    ["_*711X."] = function (context, extension)
-      local number = extension:sub(4);
-      set_callerid(channel, number);
-      local status = dial('SIP/297232_ghost/711');
-      app.hangup();
-    end,
     ["_**X."] = function (context, extension)
       local extension_to_save, extension_record = extension:match('%*%*([^%*]+)%*(.*)$');
       set_custom_extension(channel.ext:get(), extension_to_save, extension_record);
@@ -793,7 +778,7 @@ end
 
 function send_to_zero_call(channel)
   set_outbound_callerid();
-  local outbound = cache:get('outbound.' .. ((channel.override and channel.override:get()) or channel.did:get())) or '297232_ghost';
+  local outbound = cache:get('outbound.' .. ((channel.override and channel.override:get()) or channel.did:get())) or os.getenv("VOIPMS_SIP_USERNAME")
   return dial('SIP/' .. outbound .. '/16176754444,,D(ww1308114334947#)');
 end
 
@@ -802,7 +787,7 @@ hooks = {
     ["990"] = function (context, extension) send_to_zero_call(channel); end,
     ["991"] = function (context, extension)
       set_outbound_callerid();
-      return dial('SIP/297232_ghost/18484568150,,D(111917636#)');
+      return dial('SIP/' .. os.getenv("VOIPMS_SIP_USERNAME") .. '/18484568150,,D(111917636#)');
     end,
     ["4757772244"] = function (context, extension) return app.hangup(); end
   },
