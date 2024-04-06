@@ -83,18 +83,20 @@ const orderDID = async (number, sourceDid) => {
     const ext = await redis.get('extfor.' + sourceDid);
     const { servers } = await vms.getServersInfo.get();
     const { server_pop } = servers.find((v) => v.server_hostname === (VOIPMS_POP || 'atlanta1.voip.ms'));
-    await vms.orderDID.get({
+    const payload = {
         did: number,
         routing: 'account:' + VOIPMS_SUBACCOUNT,
         pop: server_pop,
         dialtime: 60,
         cnam: 1,
         billing_type: 1
-    });
-    await vms.setSMS.get({
+    };
+    logger_1.logger.info(await vms.orderDID.get(payload));
+    const smsPayload = {
         did: number,
         enable: 1
-    });
+    };
+    logger_1.logger.info(await vms.setSMS.get(smsPayload));
     await redis.set('extfor.' + number, ext);
 };
 const runLinkedIn = (query, to) => {

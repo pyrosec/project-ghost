@@ -116,6 +116,7 @@ services:
       - ROOT_PASSWORD=${ROOT_PASSWORD}
       - VOIPMS_USERNAME=${VOIPMS_API_USERNAME}
       - VOIPMS_PASSWORD=${VOIPMS_API_PASSWORD}
+      - VOIPMS_SUBACCOUNT=${VOIPMS_SIP_USERNAME}
     volumes:
       - asterisk:/etc/asterisk
     restart: unless-stopped
