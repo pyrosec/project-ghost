@@ -180,43 +180,77 @@ You: 8542 Sorry, wrong number
 
 ## Running a ghostdial server (NEW 2024)
 
-Provision a VPS via any hosting provider. If you are hosting project ghost on bare metal, skip this step. Yes, you can set up project ghost to use a server you host at home, even with a FXO card so it can dial/receive as a landline.
+The set-up for project ghost requires:
 
-VPS hosts I prefer are [https://bitlaunch.io](https://bitlaunch.io) since it only requires to pay in crypto. Provisioning on AWS with an anonymous account is more involved but I generally will use a Google account I create with a cheap but genuine prepaid Android phone from a department store, then [https://textverified.com](https://textverified.com) for the OTP (tooling available at [https://github.com/pyrosec/textverified](https://github.com/pyrosec/textverified). In this case I use gift cards to pay from [https://coinsbee.com](https://coinsbee.com) (tooling again available on pyrosec at [https://github.com/pyrosec/coinsbee](https://github.com/pyrosec/coinsbee).
+- A server with docker available (can be a home server)
+- A domain name
+- Twilio API keys
+- API keys for a voip.ms account
+- A SIP subaccount on the same voip.ms account
+- A Google Cloud service account JSON file
+- Recaptcha API keys
 
-Provisioning on Google cloud can also be done by cycling through $300 trial accounts, but it requires proper methodology in orchestrating your Google accounts. The best way is with genuine phones or pre-made PVAs on the secondary market, which is more cost effective long-term.
+### Provisioning a server
 
-In a later step we will use a Google Cloud trial account when we set up voicemail, but bitlaunch.io is likely the best way to get up and running.
+Provision a VPS via any hosting provider. If you are hosting project ghost on bare metal or at home, skip this step.
+
+A good choice for a VPS host is [https://bitlaunch.io](https://bitlaunch.io), since this platform allows for payment with cryptocurrency.
+
+Provisioning on AWS with an anonymous account is more involved, but it is easiest to do so with a Google account made with a cheap prepaid Android phone from any department store.
+
+AWS will request a phone number to send an OTP. It is possible to use [https://textverified.com](https://textverified.com) for the OTP. For this we have a CLI tool available at [https://github.com/pyrosec/textverified](https://github.com/pyrosec/textverified).
+
+Provisioning on Google Cloud can also be done by cycling through $300 trial accounts. There are many vendors online which sell bulk Google accounts for cheap, which can be used for this purpose.
+
+### DNS configuration
 
 Once your VPS is provisioned, set up a domain with namecheap.com. It is possible to pay with cryptocurrency for namecheap.com as well, if you create the account and credit the namecheap with a balance prior to making the domain.
 
-Create a free cloudflare.com account and add your domain. Set nameservers on your domain in the namecheap.com configuration to the nameservers Cloudflare provides, then create an A record for the domain name set to the IP address of your VPS. I generally will set up improvmx.com as well to get free mail forwarding for the domain.
+Next, create a free cloudflare.com account and add your domain. Set nameservers on your domain in the namecheap.com configuration to the nameservers Cloudflare provides, then create an A record that points to your VPS.
 
 It is acceptable to provision a VPS and configure DNS for it by any means you prefer, if the above instructions are not your usual methods.
 
-Create an account at [https://voip.ms](https://voip.ms) and KYC. The fastest way to KYC is to immediately start a live chat with the voip.ms support team and send an ID to them manually. Once the account is activated, credit the account with a balance so the account can be used to provision phone lines.
+### SIP trunking with voip.ms
 
-Paying in cryptocurrency is possible with a AMEX prepaid gift card available on: [https://coinsbee.com](https://coinsbee.com)
+Create an account at [https://voip.ms](https://voip.ms) and KYC. The fastest way to KYC is to start a live chat with the voip.ms support team, where you can send an ID to them manually. In this context, they will be highly responsive and activate the account quickly.
 
-Within the account settings of voip.ms, enable API usage for the IP address you will run project ghost from. You will need the API password in your project ghost .env file.
+Once the account is activated, credit the account with a balance, so the account can be used to provision phone lines. Paying in cryptocurrency is possible with a AMEX prepaid gift card available on: [https://coinsbee.com](https://coinsbee.com)
+
+Tooling for coinsbee is hosted at [https://github.com/pyrosec/coinsbee](https://github.com/pyrosec/coinsbee).
+
+Within the account settings of voip.ms, enable API usage for the IP address associated with your VPS. You will need the API password in your project ghost .env file.
 
 Create a SIP subaccount and password in the voip.ms UI. Configure the subaccount such that voip.ms does not set callerid for you (there is an option to indicate that your system is capable of setting its own caller ID.
 
 In the SIP subaccount configuration, enable SIP traffic encryption, or else you will not be able to place calls.
 
-Create a Twilio trial account and record the SID / auth token. Search the account configuration on the Twilio dashboard for the SID, which should be the one starting with `AC`. The auth token you should be able to reveal right below, which should be a lowercase hex string if you have found the right secret.
+### CallerID with the Twilio API
 
-Twilio does not bill much for their phone lookup APIs, so the trial account should be enough for quite a while. When it runs out, you can cycle to a new Google account for a new trial account and swap keys.
+Create a Twilio trial account and record the SID / auth token. Search the account configuration on the Twilio dashboard for the SID. The SID will be the one starting with `AC`.
 
-Activate a gcloud trial account at [https://console.cloud.google.com](https://console.cloud.google.com) and serviceaccount.json with full permissions. Name the JSON serviceaccount.json, as we will copy it to ghostdb/gcloud/serviceaccount.json once we create the file hierarchy for your project-ghost filesystem database.
+The auth token you should be able to reveal right below the SID. It will be a lowercase hex string.
 
-We are only using gcloud to power our ghostly voicemail transcription and persistence, so the $300 credit will last forever.
+Twilio does not bill much for their phone lookup APIs, so the trial account should be enough for quite a while. When it runs out, you can cycle to a new Google account to create new trial account.
 
-Within the gcloud console, activate the speech-to-text APIs and also create a storage bucket and record the name for it.
+### Voicemail transcription with Google Cloud
+
+Activate a Google Cloud trial account at [https://console.cloud.google.com](https://console.cloud.google.com) and serviceaccount.json with full permissions. Name the JSON `serviceaccount.json`.
+
+We are only using Google Cloud to power our ghostly voicemail transcription and persistence, so the $300 credit will last a very long time.
+
+Within the Google Cloud console, activate the speech-to-text APIs, and also create a storage bucket. Record the name you assign to your storage bucket.
+
+### Recaptcha to safeguard Matrix server account creation
 
 Get recaptcha API keys for your domain. The procedure is simple:
 
-Create the keys here [https://www.google.com/recaptcha/admin/create](https://www.google.com/recaptcha/admin/create). Set the label to anything you want. Set the type to reCAPTCHA v2 using the "I'm not a robot" Checkbox option (this is the only thing that will work with synapse). Go to the settings page for the CAPTCHA you just created. Uncheck the "Verify the origin of reCAPTCHA solutions" checkbox so that the captcha can be displayed in any client. If you do not disable this option then you must specify the domains of every client that is allowed to display the CAPTCHA.
+1. Create the keys here [https://www.google.com/recaptcha/admin/create](https://www.google.com/recaptcha/admin/create).
+2. Set the label to anything you want.
+3. Set the type to reCAPTCHA v2 using the "I'm not a robot" Checkbox option (this is the only thing that will work with synapse).
+4. Go to the settings page for the CAPTCHA you just created.
+5. Uncheck the "Verify the origin of reCAPTCHA solutions" checkbox so that the captcha can be displayed in any client. If you do not disable this option then you must specify the domains of every client that is allowed to display the CAPTCHA.
+
+### Launching the server
 
 Now you are ready to run project ghost on the server you have launched.
 
@@ -277,7 +311,9 @@ cd ghostdial
 docker-compose up -d
 ```
 
-Check out the file hierarchy created by the program run to familiarize yourself. Some notable filepaths would be
+### Deployment structure
+
+Check out the file hierarchy created by the program run to familiarize yourself.
 
 - ghostdb/asterisk/  (contains the exported asterisk configurations, which can be changed arbitrarily to suit your team's needs)
 - ghostdb/prosody/ (contains prosody databases)
@@ -321,7 +357,7 @@ Now you can create an XMPP account on your server 7576255330@myghostserver.is an
 
 The first number you provision becomes the default for your extension. But at any time this can be updated in redis via the key `didfor.123`. There has to be a value set for this key, likewise for `extfor.7576255330` should be set to `123` for inbound calls to ring your phone.
 
-You can configure the PSTN phone number to your actual cell phone by setting the `fallback.123` key to the phone number (no country code) that you want to ring if your SIP phone doesn't answer. Text fowarding can be set by setting `sms-fallback.123` to whatever phone number you want to receive texts over the normal phone network.
+You can configure the PSTN phone number to your actual cell phone by setting the `fallback.123` key to the phone number (no country code) that you want to ring if your SIP phone doesn't answer. Text fowarding can be set by setting `sms-fallback.123` to the phone number you want to receive texts over the normal phone network.
 
 The best thing to do, however, is to port the phone number that you use on your phone to your voip.ms account, then configure that phone number on the voip.ms system to ring your SIP subaccount on voip.ms such that your project ghost can handle it. You will have to explicitly enable SMS/MMS for that DID that you port in, since project ghost did not create it.
 
@@ -390,4 +426,5 @@ Install Element Secure Messenger on desktop and mobile. Create an account using 
 Message me at @reyes:matrix.pyrosec.is if you would like to speak to me.
 
 ## Author
+
 Pyrosec Labs
