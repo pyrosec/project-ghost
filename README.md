@@ -252,6 +252,12 @@ Get recaptcha API keys for your domain. The procedure is simple:
 
 ### Launching the server
 
+If you are unable, for any reason, to ascertain your public IP address to set the EXTERNIP variable to in the .env file we discuss in the next section, use the command:
+
+```sh
+curl https://ipinfo.io/json
+```
+
 Now you are ready to run project ghost on the server you have launched.
 
 Ensure that docker and docker-compose are available on the system.
@@ -326,6 +332,22 @@ Check out the file hierarchy created by the program run to familiarize yourself.
 - ghostdb/vaultwarden/ (contains encrypted data associated with password manager accounts on the vaultwarden instance)
 - ghostdb/redis/ (contains the redis database)
 - ghostdb/postgres/ (contains the postgres database used for matrix-synapse)
+
+## Running project-ghost behind NAT
+
+To run project-ghost on your home server, you just have to port forward the following TCP ports:
+
+- 35061
+- 443
+- 80
+- 5222
+- 5223
+- 5347
+- 5269
+- 5280
+- 5281
+
+You must also port forward the UDP port range 30000-30099
 
 ## Piloting your deployment
 
