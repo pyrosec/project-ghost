@@ -1,0 +1,10 @@
+{
+  "name": "@ghostdial/puppeteer",
+  "version": "0.1.0",
+  "description": "puppeteer",
+  "main": "lib/index.js",
+  "repository": "https://github.com/pyrosec/project-ghost",
+  "author": "pyrosec",
+  "license": "MIT",
+  "private": false
+}

@@ -637,6 +637,7 @@ const printDossier = async (body, to) => {
         const secret = crypto.randomBytes(8).toString("hex");
         sipAccounts.push({
           section: match,
+	  modifier: 'friends_internal',
           fields: [
             ["defaultuser", match],
             ["secret", secret],
