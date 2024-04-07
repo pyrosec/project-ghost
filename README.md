@@ -347,7 +347,9 @@ To run project-ghost on your home server, you just have to port forward the foll
 - 5280
 - 5281
 
-You must also port forward the UDP port range 30000-30099
+You must also port forward the UDP port range
+
+- 30000-30099
 
 ## Piloting your deployment
 
