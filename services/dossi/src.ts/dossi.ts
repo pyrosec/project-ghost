@@ -564,12 +564,12 @@ const printDossier = async (body, to) => {
     return;
   }
   if (body.substr(0, "ghostem".length).toLowerCase() === "ghostem") {
-    await redis.set("ghostem." + to, "1");
+    await redis.set("ghostem." + to.split('@')[0], "1");
     talkGhastly(to);
     return;
   }
   if (body.substr(0, "unghostem".length).toLowerCase() === "unghostem") {
-    await redis.del("ghostem." + to);
+    await redis.del("ghostem." + to.split('@')[0]);
     talkGhastly(to);
     return;
   }
