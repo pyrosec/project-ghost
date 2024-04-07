@@ -447,8 +447,20 @@ To use these, you can navigate directly to the domain you configured to access t
 
 Install Element Secure Messenger on desktop and mobile. Create an account using your server as the custom homeserver.
 
-Message me at @reyes:matrix.pyrosec.is if you would like to speak to me.
+
+## Using project-ghost to scaffold new projects
+
+Getting up and running with asterisk can be daunting, and it is even less convenient to containerize. The software in project ghost is organized such that you can quickly scaffold a fully functional PBX with realtime chat features, and the various components of a fully qualified privacy/intelligence stack, using fully open source repositories and affordable API usage.
+
+The asterisk configuration is exported to the file system in this configuration. The included configurations use a LUA dialplan for full programmability and convenient access to an in-cluster redis instance, for setting up queues and pipelines to be consumed by sibling container processes.
+
+Once containerized in this fashion, it becomes much more straightforward to add external asterisk bridges built with NodeJS to the runtime of asterisk. Just in time for the AI future to take shape.
+
+Best of luck in your hunt for freedom.
+
 
 ## Author
 
 Pyrosec Labs
+
+Message me at @reyes:matrix.pyrosec.is if you would like to speak to me.
