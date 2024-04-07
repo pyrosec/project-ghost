@@ -3,7 +3,6 @@ import debug from "@xmpp/debug";
 import url from "url";
 import { client, xml } from "@xmpp/client";
 import AMI from "asterisk-manager";
-import subprocesses from "@ghostdial/subprocesses";
 import xid from "@xmpp/id";
 import pipl from "@ghostdial/pipl";
 import VoipMs from "@ghostdial/voipms";
@@ -11,6 +10,7 @@ import fs from "fs-extra";
 import { FaxvinPuppeteer } from "faxvin-puppeteer";
 import { Client } from "ssh2";
 import child_process from "child_process";
+import * as subprocesses from "@ghostdial/subprocesses";
 import Redis from "ioredis";
 
 import path from "path";
@@ -729,7 +729,7 @@ const printDossier = async (body, to) => {
     const match = body.match(/^socialscan\s+(.*$)/);
     if (match) {
       const search = match[1];
-      send(JSON.stringify(await subprocesses.socialscan(search), null, 2), to);
+      await subprocesses.socialscan(search, (v) => send(v, to));
       talkGhastly(to);
     }
     return;
@@ -740,7 +740,7 @@ const printDossier = async (body, to) => {
       const search = match[1];
       send("web_accounts_list_checker.py -u " + search, to);
       send("wait for complete ...", to);
-      send(await subprocesses.whatsmyname(search), to);
+      await subprocesses.whatsmyname(search, (v) => send(v, to));
       talkGhastly(to);
     }
     return;
@@ -751,7 +751,7 @@ const printDossier = async (body, to) => {
       const search = match[1];
       send("holehe " + search, to);
       send("wait for complete ...", to);
-      send(await subprocesses.holehe(search), to);
+      await subprocesses.holehe(search, (v) => send(v, to));
       talkGhastly(to);
     }
     return;

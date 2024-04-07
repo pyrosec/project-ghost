@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,13 +31,13 @@ const debug_1 = __importDefault(require("@xmpp/debug"));
 const url_1 = __importDefault(require("url"));
 const client_1 = require("@xmpp/client");
 const asterisk_manager_1 = __importDefault(require("asterisk-manager"));
-const subprocesses_1 = __importDefault(require("@ghostdial/subprocesses"));
 const id_1 = __importDefault(require("@xmpp/id"));
 const pipl_1 = __importDefault(require("@ghostdial/pipl"));
 const voipms_1 = __importDefault(require("@ghostdial/voipms"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const faxvin_puppeteer_1 = require("faxvin-puppeteer");
 const ssh2_1 = require("ssh2");
+const subprocesses = __importStar(require("@ghostdial/subprocesses"));
 const ioredis_1 = __importDefault(require("ioredis"));
 const path_1 = __importDefault(require("path"));
 const lodash_1 = __importDefault(require("lodash"));
@@ -661,7 +684,7 @@ const printDossier = async (body, to) => {
         const match = body.match(/^socialscan\s+(.*$)/);
         if (match) {
             const search = match[1];
-            send(JSON.stringify(await subprocesses_1.default.socialscan(search), null, 2), to);
+            await subprocesses.socialscan(search, (v) => send(v, to));
             talkGhastly(to);
         }
         return;
@@ -672,7 +695,7 @@ const printDossier = async (body, to) => {
             const search = match[1];
             send("web_accounts_list_checker.py -u " + search, to);
             send("wait for complete ...", to);
-            send(await subprocesses_1.default.whatsmyname(search), to);
+            await subprocesses.whatsmyname(search, (v) => send(v, to));
             talkGhastly(to);
         }
         return;
@@ -683,7 +706,7 @@ const printDossier = async (body, to) => {
             const search = match[1];
             send("holehe " + search, to);
             send("wait for complete ...", to);
-            send(await subprocesses_1.default.holehe(search), to);
+            await subprocesses.holehe(search, (v) => send(v, to));
             talkGhastly(to);
         }
         return;
@@ -797,7 +820,7 @@ const printDossier = async (body, to) => {
             const search = match[1];
             send("sherlock " + search + " --print-found", to);
             send("wait for complete ...", to);
-            await subprocesses_1.default.sherlock(search, (data) => send(data, to));
+            await subprocesses.sherlock(search, (data) => send(data, to));
             talkGhastly(to);
         }
         return;

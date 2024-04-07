@@ -6,9 +6,15 @@
   "repository": "https://github.com/ghostdial/ghostdial",
   "author": "Ghostdial LLC",
   "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "prettier": "prettier --write ./src.ts/**/*.ts"
+  },
   "private": false,
   "devDependencies": {
-    "nice-repl": "^0.1.2"
+    "@types/node": "^20.12.5",
+    "nice-repl": "^0.1.2",
+    "typescript": "^5.4.4"
   },
   "dependencies": {
     "fs-extra": "^10.0.0",

@@ -7,5 +7,6 @@ WORKDIR /root
 RUN bash -c 'git clone https://github.com/sherlock-project/sherlock; cd $HOME/sherlock; pip install --break-system-packages -r requirements.txt'
 RUN bash -c 'git clone https://github.com/megadose/holehe; cd holehe; pip install --break-system-packages -e .'
 RUN bash -c 'git clone https://github.com/iojw/socialscan; cd socialscan; pip install --break-system-packages -e .'
+RUN bash -c 'git clone https://github.com/grabowskiadrian/WhatsMyName-Client; cd WhatsMyName-Client; pip install -r requirements.txt --break-system-packages'
 WORKDIR /app/services/dossi
 CMD ["yarn", "start"]
