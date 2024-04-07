@@ -40,6 +40,7 @@ http {
         ssl_certificate /etc/letsencrypt/live/DOMAIN/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/DOMAIN/privkey.pem;
 	index index.html index.htm index.nginx-debian.html;
+        root /usr/share/nginx/html;
 
         location /.well-known/matrix/client {
             add_header Content-Type application/json;
@@ -71,13 +72,21 @@ http {
             # Synapse responses may be chunked, which is an HTTP/1.1 feature.
             proxy_http_version   1.1;
          }
-         location / {
+         location /vault {
             proxy_set_header "Connection" "";
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_pass http://vaultwarden-default;
+            proxy_pass http://vaultwarden-default/;
+         }
+         location ~ ^/(?:_next/.*$|.*(?:ssg|build|framework|page-script).*js|image/.*|$) {
+            proxy_set_header "Connection" "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_pass http://NEXT_CNAME:80;
          }
          location /notifications/hub/negotiate {
             proxy_http_version 1.1;
@@ -104,7 +113,7 @@ http {
             proxy_pass http://vaultwarden-ws;
         }
           
-        location ~ ^(?:/$|/(vw_static|scripts|templates|api|identity|fonts|app|images|static|hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
+        location ~ ^(?:/$|/(vw_static|locales|theme_head|scripts|templates|api|identity|fonts|app|images|static|hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect|[^/]+json$)) {
             proxy_pass           http://vaultwarden-default;
             proxy_set_header     X-Forwarded-For $remote_addr;
             proxy_set_header     X-Forwarded-Proto $scheme;

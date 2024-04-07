@@ -46,6 +46,6 @@ fi
 
 mkdir -p /var/log/nginx
 chmod 777 /var/log/nginx
-cat /templates/nginx.conf.tpl | sed -e "s/DOMAIN/$DOMAIN/g" > /etc/nginx/nginx.conf 2> /dev/null
+cat /templates/nginx.conf.tpl | sed -e "s/DOMAIN/$DOMAIN/g" -e "s/NEXT_CNAME/$NEXT_CNAME/g" > /etc/nginx/nginx.conf 2> /dev/null
 
 exec "$@"
