@@ -7,5 +7,6 @@ WORKDIR /root
 RUN bash -c 'git clone https://github.com/sherlock-project/sherlock; cd $HOME/sherlock; pip install -r requirements.txt'
 RUN bash -c 'git clone https://github.com/megadose/holehe; cd holehe; pip install -e .'
 RUN bash -c 'git clone https://github.com/iojw/socialscan; cd socialscan; python3 setup.py install'
+RUN bash -c 'git clone https://github.com/grabowskiadrian/WhatsMyName-Client; cd WhatsMyName-Client; pip install -r requirements.txt --break-system-packages'
 WORKDIR /app
 CMD ["yarn", "start"]

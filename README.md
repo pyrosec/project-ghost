@@ -232,6 +232,12 @@ The auth token you should be able to reveal right below the SID. It will be a lo
 
 Twilio does not bill much for their phone lookup APIs, so the trial account should be enough for quite a while. When it runs out, you can cycle to a new Google account to create new trial account.
 
+### Background checks with Endato
+
+Create an account at https://endato.com.
+
+Create API keys.
+
 ### Voicemail transcription with Google Cloud
 
 Activate a Google Cloud trial account at [https://console.cloud.google.com](https://console.cloud.google.com) and serviceaccount.json with full permissions. Name the JSON `serviceaccount.json`.
@@ -283,6 +289,8 @@ VOICEMAIL_BUCKET=<name of gcloud storage bucket for voicemail>
 PROJECT_GHOST_DATABASE=<path to directory where ghostdial files will live, /root/ghostdb in our example>
 VOIPMS_API_USERNAME=<voipms username>
 VOIPMS_API_PASSWORD=<voipms API password>
+ENDATO_API_KEY=<endato user key>
+ENDATO_API_SECRET=<endato password key>
 DOMAIN=<domain name for ghostdial server>
 ROOT_PASSWORD=<pick any root password and keep it private>
 STUN_HOST=<host coturn yourself or use a public STUN server>
