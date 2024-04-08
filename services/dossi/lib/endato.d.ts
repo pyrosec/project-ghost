@@ -6,5 +6,5 @@ export declare class EndatoClient {
     constructor({ apiKey, apiSecret, searchType, clientType }: any);
     static fromEnv(): EndatoClient;
     _call(endpoint: string, searchType: string, payload: any): Promise<any>;
-    personSearch({ name, address, citystatezip, dob }: any): Promise<any>;
+    personSearch({ name, address, phone, email, citystatezip, dob }: any): Promise<any>;
 }

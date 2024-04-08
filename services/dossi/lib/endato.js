@@ -32,16 +32,18 @@ class EndatoClient {
         console.log(responseText);
         return JSON.parse(responseText);
     }
-    async personSearch({ name, address, citystatezip, dob }) {
-        const nameSplit = name.split(/\s/g);
-        const first = nameSplit[0];
-        const last = nameSplit[nameSplit.length - 1];
+    async personSearch({ name, address, phone, email, citystatezip, dob }) {
+        const nameSplit = (name || '').split(/\s/g);
+        const first = nameSplit[0] || undefined;
+        const last = nameSplit[nameSplit.length - 1] || undefined;
         const middle = nameSplit.length > 2 ? nameSplit[1] : undefined;
         return await this._call('https://devapi.endato.com/PersonSearch', 'Person', {
             FirstName: first,
             MiddleName: middle,
             LastName: last,
-            Addresses: [{
+            Phone: phone,
+            Email: email,
+            Addresses: (address || citystatezip) && [{
                     AddressLine1: address,
                     AddressLine2: citystatezip
                 }],
