@@ -68,6 +68,10 @@ dossi: <background check on Karl Ghostenheim that is most relevant to search ter
 You: pipl raw_name:"Karl Ghostenheim" state:CA city:Marietta age:20-30
 dossi: <background check with narrower search terms>
 
+You: endato name:"Karl Ghostenheim" address:"321 Gauss Dr" citystatezip:"Marietta, GA"
+OR
+You: endato phone:7035850092
+
 You: sherlock ghostguy
 dossi: <list of places the username ghostguy has been used, using the sherlock tool>
 
