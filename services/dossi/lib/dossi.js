@@ -342,9 +342,9 @@ function printEndatoResult(persons, send) {
             rows.push('Relatives');
             v.relativesSummary.forEach(({ firstName, middleName, lastName }) => rows.push('  - ' + firstName + ' ' + middleName + ' ' + lastName));
         }
-        if (v.associates.length) {
+        if (v.associatesSummary.length) {
             rows.push('Associates');
-            v.associates.forEach(({ fullName }) => rows.push('  - ' + fullName));
+            v.associatesSummary.forEach(({ fullName }) => rows.push('  - ' + fullName));
         }
         send(rows.join('\n'));
     });
