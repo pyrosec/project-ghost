@@ -117,6 +117,8 @@ services:
       - VOIPMS_USERNAME=${VOIPMS_API_USERNAME}
       - VOIPMS_PASSWORD=${VOIPMS_API_PASSWORD}
       - VOIPMS_SUBACCOUNT=${VOIPMS_SIP_USERNAME}
+      - ENDATO_API_KEY=${ENDATO_API_KEY}
+      - ENDATO_API_SECRET=${ENDATO_API_SECRET}
     volumes:
       - asterisk:/etc/asterisk
     restart: unless-stopped

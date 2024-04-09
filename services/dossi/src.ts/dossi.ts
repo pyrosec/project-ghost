@@ -4,25 +4,26 @@ import url from "url";
 import { client, xml } from "@xmpp/client";
 import AMI from "asterisk-manager";
 import xid from "@xmpp/id";
-import pipl from "@ghostdial/pipl";
-import VoipMs from "@ghostdial/voipms";
+//import pipl from "@ghostdial/pipl";
+import { VoipMs } from "./voipms";
 import fs from "fs-extra";
 import { FaxvinPuppeteer } from "faxvin-puppeteer";
 import { Client } from "ssh2";
 import child_process from "child_process";
-import * as subprocesses from "@ghostdial/subprocesses";
+import * as subprocesses from "./subprocesses";
 import Redis from "ioredis";
 
 import path from "path";
 import { mkdirp } from "mkdirp";
 import lodash from "lodash";
-import { TruePuppeteer } from "truepeoplesearch-puppeteer";
+import { EndatoClient } from "./endato";
 import facebook from "facebook-recover-puppeteer";
 import OpenAI from "openai-api";
 import { logger } from "./logger";
 import {
   parseConfiguration,
   parseVoicemail,
+  piplQueryToObject,
   buildVoicemail,
   buildConfiguration,
   readVoicemail,
@@ -259,22 +260,6 @@ const runZgrepFull = (query, to) => {
   });
 };
 
-const piplQueryToObject = (query) => {
-  try {
-    return query
-      .match(/([^\s:]+):((?:"((?:[^"\\]|\\[\s\S])*)")|(?:\S+))/g)
-      .map((v) =>
-        v.split(":").map((v) => (v.substr(0, 1) === '"' ? JSON.parse(v) : v)),
-      )
-      .reduce((r, [key, value]) => {
-        r[key] = value;
-        return r;
-      }, {});
-  } catch (e) {
-    return {};
-  }
-};
-
 const spookyStuff = [
   "don't let them see you",
   "look alive ghost",
@@ -357,6 +342,40 @@ const printPiplResult = async (search, result, to) => {
   await sendPiplImages(result, to);
 };
 
+export function printEndatoResult(persons: any, send: any) {
+  persons.forEach((v) => {
+    const rows = [];
+    rows.push(v.fullName + (v.age ? ' - ' + v.age : '') + (v.dob ? ' - ' + v.dob : ''));
+    if (v.emailAddresses) {
+      rows.push('E-mails');
+      v.emailAddresses.forEach((email) => rows.push('  - ' + email.emailAddress))
+    }
+    if (v.phoneNumbers) {
+      rows.push('Phone');
+      v.phoneNumbers.forEach(({ phoneNumber, company, location, phoneType }) => {
+        rows.push('  - ' + phoneNumber);
+	rows.push('    - ' + phoneType);
+	rows.push('    - ' + location);
+	rows.push('    - ' + company);
+      });
+    }
+    if (v.addresses) {
+      rows.push('Addresses');
+      v.addresses.forEach((address) => rows.push('  - ' + address.fullAddress));
+    }
+    if (v.relativesSummary.length) {
+      rows.push('Relatives');
+      v.relativesSummary.forEach(({ firstName, middleName, lastName }) => rows.push('  - ' + firstName + ' ' + middleName + ' ' + lastName));
+    }
+    if (v.associates.length) {
+      rows.push('Associates');
+      v.associates.forEach(({ fullName }) => rows.push('  - ' + fullName));
+    }
+    send(rows.join('\n'));
+  });
+}
+
+/*
 const piplNumberLookup = async (number, to) => {
   const cached = await redis.get("pipl." + number);
   if (cached) {
@@ -368,6 +387,7 @@ const piplNumberLookup = async (number, to) => {
     await printPiplResult(number, result, to);
   }
 };
+*/
 
 const twilioLookup = (phoneNumber) =>
   twilio.lookups
@@ -462,6 +482,7 @@ const callerId = async (number, to) => {
   send(JSON.stringify(twilioResults, null, 2), to);
 };
 
+/*
 const lookupTruePeopleSearchQuery = async (query) => {
   const truepeoplesearch = (await TruePuppeteer.initialize({
     noSandbox: true,
@@ -485,6 +506,7 @@ const lookupTruePeopleSearchQuery = async (query) => {
   await truepeoplesearch._browser.close();
   return result;
 };
+*/
 
 const lookupFaxVinQuery = async (query) => {
   const faxvin = (await FaxvinPuppeteer.initialize({
@@ -637,6 +659,7 @@ const printDossier = async (body, to) => {
         const secret = crypto.randomBytes(8).toString("hex");
         sipAccounts.push({
           section: match,
+	  modifier: 'friends_internal',
           fields: [
             ["defaultuser", match],
             ["secret", secret],
@@ -792,6 +815,22 @@ const printDossier = async (body, to) => {
     return;
   }
   if (
+    body.substr(0, "endato".length).toLowerCase() ===
+    "endato"
+  ) {
+    const match = body.match(/^endato\s+(.*$)/i);
+    if (match) {
+      const search = match[1];
+      logger.info(search);
+      logger.info(piplQueryToObject(search));
+      send('endato ' + search, to);
+      printEndatoResult((await EndatoClient.fromEnv().personSearch(piplQueryToObject(search))).persons || [], (v) => send(v, to));
+      talkGhastly(to);
+    }
+    return;
+  }
+  /*
+  if (
     body.substr(0, "truepeoplesearch".length).toLowerCase() ===
     "truepeoplesearch"
   ) {
@@ -808,6 +847,7 @@ const printDossier = async (body, to) => {
     }
     return;
   }
+ */
   if (body.substr(0, "facebook".length).toLowerCase() === "facebook") {
     const match = body.match(/^facebook\s+(.*$)/i);
     if (match) {
@@ -880,6 +920,7 @@ const printDossier = async (body, to) => {
     return;
   }
 
+  /*
   if (body.substr(0, 4).toLowerCase() === "pipl") {
     const match = body.match(/^(?:p|P)ipl\s+(.*$)/);
     if (match) {
@@ -908,14 +949,14 @@ const printDossier = async (body, to) => {
         return;
       }
     }
-  } else if (/(?:^\d{10,11}$)/.test(body)) {
+   */
+  if (/(?:^\d{10,11}$)/.test(body)) {
     if (body.length === 11) body = body.substr(1);
     body = "+1" + body;
     const twilioResults = await twilioLookup(body);
-    const peopleDataLabsResults = deleteNullKeys(
-      await peopledatalabs.personEnrich({ phone: body }),
-    );
-    send(JSON.stringify({ twilioResults, peopleDataLabsResults }, null, 2), to);
+    const endatoResults = (await EndatoClient.fromEnv().personSearch({ phone: body })).persons || [];
+    send(JSON.stringify({ ...twilioResults }, null, 2), to);
+    printEndatoResult(endatoResults, (v) => send(v, to));
     send("good luck ghost", to);
   } else if (body.match(/\w+/g).length === 3) {
     const [first_name, last_name, region] = body.match(/\w+/g);

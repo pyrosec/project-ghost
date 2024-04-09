@@ -5,3 +5,4 @@ export declare const buildConfiguration: (o: any) => any;
 export declare const readVoicemail: () => Promise<any>;
 export declare const writeVoicemail: (voicemailAccounts: any) => Promise<void>;
 export declare const readSipAccounts: () => Promise<any>;
+export declare const piplQueryToObject: (query: string) => any;

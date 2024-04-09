@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.readSipAccounts = exports.writeVoicemail = exports.readVoicemail = exports.buildConfiguration = exports.buildVoicemail = exports.parseVoicemail = exports.parseConfiguration = void 0;
+exports.piplQueryToObject = exports.readSipAccounts = exports.writeVoicemail = exports.readVoicemail = exports.buildConfiguration = exports.buildVoicemail = exports.parseVoicemail = exports.parseConfiguration = void 0;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const parseConfiguration = (s) => {
     return s.match(/\[[^\[]+/gm).map((v) => ({
@@ -88,4 +88,19 @@ const readSipAccounts = async () => {
     return (0, exports.parseConfiguration)(await fs_extra_1.default.readFile("/etc/asterisk/sip.conf", "utf8"));
 };
 exports.readSipAccounts = readSipAccounts;
+const piplQueryToObject = (query) => {
+    try {
+        return query
+            .match(/([^\s:]+):(?:"((?:[^"\\]|\\[^"])*)")|(?:\S+)/g)
+            .map((v) => v.split(":").map((v) => v.replace(/"/g, '')).filter(Boolean)).filter(Boolean)
+            .reduce((r, [key, value]) => {
+            r[key] = value;
+            return r;
+        }, {});
+    }
+    catch (e) {
+        return {};
+    }
+};
+exports.piplQueryToObject = piplQueryToObject;
 //# sourceMappingURL=parsers.js.map
