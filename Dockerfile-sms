@@ -1,6 +1,0 @@
-FROM node:lts
-WORKDIR /app
-COPY . .
-RUN yarn
-WORKDIR /app/services/sms_pipeline
-CMD ["yarn", "start"]

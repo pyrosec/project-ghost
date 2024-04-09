@@ -90,8 +90,8 @@ services:
   sms_pipeline:
     image: ghostdial/sms_pipeline
     build:
-      context: ./
-      dockerfile: Dockerfile-sms
+      context: ./services/sms_pipeline
+      dockerfile: Dockerfile
     volumes:
       - sms_pipeline:/data
     environment:
@@ -106,8 +106,8 @@ services:
   dossi:
     image: ghostdial/dossi
     build:
-      context: ./
-      dockerfile: Dockerfile-dossi
+      context: ./services/dossi
+      dockerfile: Dockerfile
     environment:
       - DOMAIN=${DOMAIN}
       - REDIS_URI=redis://redis:6379
@@ -125,8 +125,8 @@ services:
   voicemail_pipeline:
     image: ghostdial/voicemail_pipeline
     build:
-      context: ./
-      dockerfile: Dockerfile-voicemail
+      context: ./services/voicemail_pipeline
+      dockerfile: Dockerfile
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json
       - DOMAIN=${DOMAIN}
