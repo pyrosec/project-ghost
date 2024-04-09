@@ -7,7 +7,7 @@ exports.run = void 0;
 const smpp_1 = __importDefault(require("smpp"));
 const ethers_1 = require("ethers");
 const path_1 = __importDefault(require("path"));
-const voipms_1 = __importDefault(require("@ghostdial/voipms"));
+const voipms_1 = require("./voipms");
 const logger_1 = require("./logger");
 const is_dst_1 = __importDefault(require("is-dst"));
 const ioredis_1 = __importDefault(require("ioredis"));
@@ -21,7 +21,7 @@ const SMPP_TLSCERT = process.env.SMPP_TLSCERT || null;
 const VOIPMS_USERNAME = process.env.VOIPMS_USERNAME;
 const VOIPMS_PASSWORD = process.env.VOIPMS_PASSWORD;
 const GHOST_NUMBER = process.env.GHOST_NUMBER;
-const voipms = new voipms_1.default({
+const voipms = new voipms_1.VoipMs({
     username: VOIPMS_USERNAME,
     password: VOIPMS_PASSWORD,
 });

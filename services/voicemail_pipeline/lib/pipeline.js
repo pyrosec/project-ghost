@@ -15,12 +15,10 @@ const client_1 = require("@xmpp/client");
 const transcript_1 = require("./transcript");
 const storage_1 = require("./storage");
 const logger_1 = require("./logger");
-const yargs_1 = __importDefault(require("yargs"));
 const serviceaccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const voicemailDirectory = process.env.VOICEMAIL_DIRECTORY || '/var/spool/asterisk/voicemail/default';
 mkdirp_1.default.sync(voicemailDirectory);
-const filename = yargs_1.default.argv._[0];
 const bucketName = (process.env.DOMAIN || 'ghostdial.net').replace(/\./g, '-') + '-voicemail';
 const getCallerID = (data) => {
     return data.match(/callerid=(.*)$/m)[1];

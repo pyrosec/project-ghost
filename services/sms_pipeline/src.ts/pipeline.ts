@@ -8,7 +8,7 @@ import child_process from "child_process";
 import request from "request";
 import url from "url";
 import path from "path";
-import VoipMs from "@ghostdial/voipms";
+import { VoipMs } from "./voipms";
 import { logger } from "./logger";
 import isDST from "is-dst";
 import Redis from "ioredis";

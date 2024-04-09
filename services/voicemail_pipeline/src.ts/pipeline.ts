@@ -20,7 +20,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const voicemailDirectory = process.env.VOICEMAIL_DIRECTORY || '/var/spool/asterisk/voicemail/default';
 mkdirp.sync(voicemailDirectory);
 
-const filename = yargs.argv._[0];
 const bucketName = (process.env.DOMAIN || 'ghostdial.net').replace(/\./g, '-') + '-voicemail';
 
 const getCallerID = (data) => {

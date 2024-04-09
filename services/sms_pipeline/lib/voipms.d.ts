@@ -1,6 +1,7 @@
-export declare class VoipmsClient {
+export declare class VoipMs {
     config: any;
-    static fromEnv(): VoipmsClient;
+    [key: string]: any;
+    static fromEnv(): VoipMs;
     constructor({ username, password }: {
         username: any;
         password: any;
