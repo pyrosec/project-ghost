@@ -23,7 +23,8 @@
   "query-string": "^7.0.0",
   "request": "^2.88.2",
   "smpp": "^0.5.0",
-  "sqlite3": "^5.0.2"
+  "sqlite3": "^5.0.2",
+  "winston": "^3.13.0"
  },
  "devDependencies": {
   "@types/node": "^20.11.24",
