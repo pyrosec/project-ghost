@@ -1,0 +1,17 @@
+{
+  "name": "rtt",
+  "version": "0.1.0",
+  "description": "rtt service",
+  "main": "lib/index.js",
+  "repository": "https://github.com/pyrosec/project-ghost",
+  "author": "Pyrosec",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "ari-client": "^2.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.5",
+    "typescript": "^5.4.4"
+  }
+}
