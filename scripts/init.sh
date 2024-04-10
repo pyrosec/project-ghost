@@ -5,7 +5,7 @@ function start_path() {
 startpath=$(start_path)
 database_directory=$(cat ${startpath}/../.env | grep -oP 'PROJECT_GHOST_DATABASE=.*$' | cut -d '=' -f 2)
 cd $database_directory
-declare -a directories=("postgres" "synapse" "vaultwarden" "www-data" "redis" "letsencrypt" "asterisk" "spool" "prosody" "gcloud" "sms_pipeline" "logs")
+declare -a directories=("postgres" "synapse" "vaultwarden" "www-data" "redis" "letsencrypt" "asterisk" "spool" "prosody" "gcloud" "sms_pipeline" "logs" "nginx")
 for i in "${directories[@]}"
 do
   echo "mkdir $database_directory/${i}/"
