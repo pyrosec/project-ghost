@@ -297,7 +297,6 @@ const ack = (stz) => {
   */
 
 const twilio = new (require("twilio"))();
-const peopledatalabs = new (require("peopledatalabs"))();
 
 const sendPiplImagesForPerson = async (person, i, to) => {
   if ((person.images || []).length) {
@@ -398,41 +397,6 @@ const cursors = {};
 
 const splitJid = (jid) => jid.match(/(?:[^@/]+)/g).filter(Boolean);
 
-const personEnrich = (first_name, last_name, region) =>
-  peopledatalabs.personEnrich({
-    first_name: first_name.toLowerCase(),
-    last_name: last_name.toLowerCase(),
-    region: region.toLowerCase(),
-  });
-
-const personSearch = async (from, query) => {
-  const [user] = splitJid(from);
-  if (query === "next") {
-    if (!cursors[user]) return send("nothing here ghost", user);
-    if (cursors[user].index === cursors[user].total)
-      return send("nothing here ghost", user);
-    const response = await peopledatalabs.personSearch({
-      sql: cursors[user].query,
-      from: cursors[user].index,
-      limit: 1,
-    });
-    response.data =
-      (response.data &&
-        response.data.map &&
-        response.data.map((v) => deleteNullKeys(v))) ||
-      response.data;
-    cursors[user].total = response.total;
-    cursors[user].index++;
-    send(JSON.stringify(response, null, 2), from);
-  } else {
-    cursors[user] = {
-      query,
-      index: 0,
-      total: 1,
-    };
-    return await personSearch(from, "next");
-  }
-};
 
 const deleteNullKeys = (o) => {
   if (typeof o !== "object") return o;
@@ -958,21 +922,8 @@ const printDossier = async (body, to) => {
     send(JSON.stringify({ ...twilioResults }, null, 2), to);
     printEndatoResult(endatoResults, (v) => send(v, to));
     send("good luck ghost", to);
-  } else if (body.match(/\w+/g).length === 3) {
-    const [first_name, last_name, region] = body.match(/\w+/g);
-    send(
-      JSON.stringify(
-        await personEnrich(first_name, last_name, region),
-        null,
-        2,
-      ),
-      to,
-    );
-    talkGhastly(to);
-  } else if (body.match(/^(?:SELECT|next)/g)) {
-    await personSearch(to, body);
-    talkGhastly(to);
-  }
+    return;
+  } 
   if (body.substr(0, "context:".length) === "context:") {
     await redis.set("context." + to, body.substr("context:".length));
     send("set", to);

@@ -103,6 +103,13 @@ services:
       - SMS_SQLITE3_DATABASE=/data/sms.db
       - REDIS_URI=redis://redis:6379
     restart: unless-stopped
+  rtt:
+    image: ghostdial/rtt
+    build:
+      context: ./services/rtt
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URI=redis://redis:6379
   dossi:
     image: ghostdial/dossi
     build:

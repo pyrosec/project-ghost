@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VoipMs = void 0;
-const query_string_1 = __importDefault(require("query-string"));
+const querystring_1 = __importDefault(require("querystring"));
 const request = require("request");
 const requestDebug = require("request-debug");
 if (process.env.NODE_ENV === "development")
@@ -260,7 +260,7 @@ class VoipMs {
         return new Promise((resolve, reject) => {
             request({
                 method: "GET",
-                url: `https://voip.ms/api/v1/rest.php?api_username=${this.config.username}&api_password=${this.config.password}&${query_string_1.default.stringify({
+                url: `https://voip.ms/api/v1/rest.php?api_username=${this.config.username}&api_password=${this.config.password}&${querystring_1.default.stringify({
                     ...o,
                     content_type: "json",
                 })}`,

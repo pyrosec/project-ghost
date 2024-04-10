@@ -1,6 +1,6 @@
 "use strict";
 
-import qs from "query-string";
+import qs from "querystring";
 import request = require("request");
 import requestDebug = require('request-debug');
 if (process.env.NODE_ENV === "development") requestDebug(request);
