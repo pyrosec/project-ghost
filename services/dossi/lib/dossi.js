@@ -343,7 +343,7 @@ function printEndatoResult(persons, send) {
         }
         if (v.associatesSummary.length) {
             rows.push('Associates');
-            v.associatesSummary.forEach(({ fullName }) => rows.push('  - ' + fullName));
+            v.associatesSummary.forEach(({ firstName, middleName, lastName }) => rows.push('  - ' + [firstName, middleName, lastName].filter(Boolean).join(' ')));
         }
         send(rows.join('\n'));
     });
