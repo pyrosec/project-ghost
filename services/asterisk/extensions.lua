@@ -465,7 +465,7 @@ function sip_handler(context, extension)
       local extghost = extension:sub(0, 4);
       local extext = extension:sub(5, 7);
       print("DIALING EXTERNAL SYSTEM LABELED " .. extghost);
-      return app.dial("SIP/" .. extghost .. "/" ..extext);
+      return app.dial("SIP/" .. extghost .. "/" .. channel.sipuser:get() .. extext);
     end
     local custom = get_custom_extension(ext, channel.extension_with_modifiers:get());
     if custom then
