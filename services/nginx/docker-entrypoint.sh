@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash -x
 # vim:sw=4:ts=4:et
 
 set -e
@@ -46,6 +46,26 @@ fi
 
 mkdir -p /var/log/nginx
 chmod 777 /var/log/nginx
-cat /templates/nginx.conf.tpl | sed -e "s/DOMAIN/$DOMAIN/g" > /etc/nginx/nginx.conf 2> /dev/null
+
+function include_conf() {
+  mkdir -p /config
+  cd /templates
+  for file in *.conf.tpl; do
+    if [[ ! -f "/config/$file" ]]; then
+      cp -v "/templates/$file" "/config/$file"
+    fi
+  done
+}
+
+function init_nginx() {
+  echo "INITIALIZING GHOSTDIAL/NGINX..."
+  include_conf
+  cd /config
+  for file in *.conf.tpl; do
+    cat /config/$file | envsubst > /etc/nginx/$(echo $file | sed -e 's/\.tpl//g') 2> /dev/null
+  done
+}
+
+init_nginx
 
 exec "$@"

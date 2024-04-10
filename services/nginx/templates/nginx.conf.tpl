@@ -30,41 +30,41 @@ http {
     server {
 	listen 80 default_server;
 	listen [::]:80 default_server;
-	return 301 https://$host$request_uri;
+	return 301 https://$${q}host$${q}request_uri;
     }
 
     server {
         resolver 127.0.0.11;
-        server_name DOMAIN;
+        server_name $DOMAIN;
 	listen 443 ssl default_server;
-        ssl_certificate /etc/letsencrypt/live/DOMAIN/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/DOMAIN/privkey.pem;
+        ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
 	index index.html index.htm index.nginx-debian.html;
 
         location /.well-known/matrix/client {
             add_header Content-Type application/json;
             add_header Access-Control-Allow-Origin *;
             return     200
-              '{"m.homeserver":{"base_url":"https://DOMAIN"},"m.identity_server":{"base_url":"https://vector.im"}}';
+              '{"m.homeserver":{"base_url":"https://$DOMAIN"},"m.identity_server":{"base_url":"https://vector.im"}}';
          }
 
          location /.well-known {
-            set $proxied synapse:8008;
+            set $${q}proxied synapse:8008;
             add_header       Access-Control-Allow-Origin *;
-            proxy_pass       http://$proxied;
-            proxy_set_header X-Forwarded-For $remote_addr;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header Host $host;
+            proxy_pass       http://$${q}proxied;
+            proxy_set_header X-Forwarded-For $${q}remote_addr;
+            proxy_set_header X-Forwarded-Proto $${q}scheme;
+            proxy_set_header Host $${q}host;
          }
          location ~ ^(/_matrix|/_synapse/client) {
             # note: do not add a path (even a single /) after the port in `proxy_pass`,
             # otherwise nginx will canonicalise the URI and cause signature verification
             # errors.
-            set $proxied synapse:8008;
-            proxy_pass           http://$proxied;
-            proxy_set_header     X-Forwarded-For $remote_addr;
-            proxy_set_header     X-Forwarded-Proto $scheme;
-            proxy_set_header     Host $host;
+            set $${q}proxied synapse:8008;
+            proxy_pass           http://$${q}proxied;
+            proxy_set_header     X-Forwarded-For $${q}remote_addr;
+            proxy_set_header     X-Forwarded-Proto $${q}scheme;
+            proxy_set_header     Host $${q}host;
             # Nginx by default only allows file uploads up to 1M in size
             # Increase client_max_body_size to match max_upload_size defined in homeserver.yaml
             client_max_body_size 500M;
@@ -73,42 +73,42 @@ http {
          }
          location / {
             proxy_set_header "Connection" "";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $${q}host;
+            proxy_set_header X-Real-IP $${q}remote_addr;
+            proxy_set_header X-Forwarded-For $${q}proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $${q}scheme;
             proxy_pass http://vaultwarden-default;
          }
          location /notifications/hub/negotiate {
             proxy_http_version 1.1;
             proxy_set_header "Connection" "";
    
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $${q}host;
+            proxy_set_header X-Real-IP $${q}remote_addr;
+            proxy_set_header X-Forwarded-For $${q}proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $${q}scheme;
    
             proxy_pass http://vaultwarden-default;
         }
         location /notifications/hub {
             proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Upgrade $${q}http_upgrade;
             proxy_set_header Connection "upgrade";
 
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header Forwarded $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $${q}host;
+            proxy_set_header X-Real-IP $${q}remote_addr;
+            proxy_set_header Forwarded $${q}remote_addr;
+            proxy_set_header X-Forwarded-For $${q}proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $${q}scheme;
      
             proxy_pass http://vaultwarden-ws;
         }
           
-        location ~ ^(?:/$|/(vw_static|scripts|templates|api|identity|fonts|app|images|static|hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
+        location ~ ^(?:/$${q}|/(vw_static|scripts|templates|api|identity|fonts|app|images|static|hub|anonymous|logout|users|organizations|diagnostics|app|attachments|alive|vw_static|sync|ciphers|accounts|devices|auth|two|sends|collections|plans|folders|emergency|settings|hibp|now|version|config|connect|invite|test|public|collect)) {
             proxy_pass           http://vaultwarden-default;
-            proxy_set_header     X-Forwarded-For $remote_addr;
-            proxy_set_header     X-Forwarded-Proto $scheme;
-            proxy_set_header     Host $host;
+            proxy_set_header     X-Forwarded-For $${q}remote_addr;
+            proxy_set_header     X-Forwarded-Proto $${q}scheme;
+            proxy_set_header     Host $${q}host;
             # Nginx by default only allows file uploads up to 1M in size
             # Increase client_max_body_size to match max_upload_size defined in homeserver.yaml
             client_max_body_size 500M;

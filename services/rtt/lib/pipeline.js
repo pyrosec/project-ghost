@@ -7,6 +7,7 @@ const redis = new ioredis_1.Redis(process.env.REDIS_URI || "redis://127.0.0.1:63
 const DIAL_OUT_CHANNEL = 'dial-out';
 async function flushOne(client, item) {
     const channel = await (client.Channel()).originate({ endpoint: 'SIP/' + item.origin, application: 'Dial', appArgs: 'SIP/' + process.env.VOIPMS_SIP_USERNAME + '/1' + item.target });
+    logger_1.logger.info(channel);
     await client.channels.setChannelVar({
         channelId: channel.id,
         variable: 'CALLERID(num)',
@@ -19,6 +20,7 @@ async function consume(client) {
         const item = await redis.lpop(DIAL_OUT_CHANNEL);
         try {
             if (item) {
+                logger_1.logger.info(item);
                 await flushOne(client, JSON.parse(item));
                 await pop();
             }

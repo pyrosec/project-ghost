@@ -182,6 +182,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - www-data:/usr/share/nginx/html
+      - nginx:/config
       - logs:/var/log
       - letsencrypt:/etc/letsencrypt
     environment:
@@ -223,6 +224,12 @@ volumes:
       type: none
       o: bind
       device: ${PROJECT_GHOST_DATABASE}/www-data
+  nginx:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_GHOST_DATABASE}/nginx
   redis:
     driver: local
     driver_opts:

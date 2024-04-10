@@ -6,6 +6,7 @@ const DIAL_OUT_CHANNEL = 'dial-out';
 
 export async function flushOne(client, item) {
   const channel = await (client.Channel()).originate({ endpoint: 'SIP/' + item.origin, application: 'Dial', appArgs: 'SIP/' + process.env.VOIPMS_SIP_USERNAME + '/1' + item.target });
+  logger.info(channel);
   await client.channels.setChannelVar({
     channelId: channel.id,
     variable: 'CALLERID(num)',
@@ -18,6 +19,7 @@ export async function consume(client) {
     const item = await redis.lpop(DIAL_OUT_CHANNEL);
     try {
       if (item) {
+        logger.info(item);
         await flushOne(client, JSON.parse(item));
         await pop();
       }
