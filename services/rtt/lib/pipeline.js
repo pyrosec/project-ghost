@@ -4,14 +4,20 @@ exports.consume = exports.flushOne = void 0;
 const ioredis_1 = require("ioredis");
 const logger_1 = require("./logger");
 const redis = new ioredis_1.Redis(process.env.REDIS_URI || "redis://127.0.0.1:6379");
-const DIAL_OUT_CHANNEL = 'dial-out';
+const DIAL_OUT_CHANNEL = "dial-out";
 async function flushOne(client, item) {
-    const channel = await (client.Channel()).originate({ endpoint: 'SIP/' + item.origin, application: 'Dial', appArgs: 'SIP/' + process.env.VOIPMS_SIP_USERNAME + '/1' + item.target });
+    const channel = await client
+        .Channel()
+        .originate({
+        endpoint: "SIP/" + item.origin,
+        application: "Dial",
+        appArgs: "SIP/" + process.env.VOIPMS_SIP_USERNAME + "/1" + item.target,
+    });
     logger_1.logger.info(channel);
     await client.channels.setChannelVar({
         channelId: channel.id,
-        variable: 'CALLERID(num)',
-        value: await redis.get('extfor.' + item.origin)
+        variable: "CALLERID(num)",
+        value: await redis.get("extfor." + item.origin),
     });
 }
 exports.flushOne = flushOne;
