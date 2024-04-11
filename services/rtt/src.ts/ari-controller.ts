@@ -25,6 +25,9 @@
 
 import EventEmitter from "events";
 import client = require("ari-client");
+import util from "util";
+
+const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 
 export class AriController extends EventEmitter {
   public options: any;
@@ -74,11 +77,12 @@ export class AriController extends EventEmitter {
   }
 
   async connect() {
-    this.ari = await client.connect(
+    this.ari = await client.connect(...ln([
       this.options.ariServerUrl,
       this.options.ariUser,
       this.options.ariPassword,
-    );
+    ]));
+    console.log('ari connected');
 
     await this.ari.start("externalMedia");
 
@@ -113,12 +117,13 @@ export class AriController extends EventEmitter {
 
     // Call the phone or confbridge specified in dialstring
     try {
-      await this.localChannel.originate({
+      await this.localChannel.originate(ln({
         endpoint: this.options.dialstring,
         formats: this.options.format,
         app: "externalMedia",
-      });
+      }));
     } catch (error) {
+      console.error(error);
       this.close();
     }
 

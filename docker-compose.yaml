@@ -6,6 +6,7 @@ services:
       context: ./services/asterisk
       dockerfile: Dockerfile
     ports:
+      - 127.0.0.1:8088:8088
       - 35061:35061/tcp
       - 30000-30099:30000-30099/udp
     environment:
@@ -109,7 +110,11 @@ services:
       context: ./services/rtt
       dockerfile: Dockerfile
     environment:
+      - ARI_URI=http://asterisk:8088/ari
       - REDIS_URI=redis://redis:6379
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json
+    volumes:
+      - gcloud:/gcloud
   dossi:
     image: ghostdial/dossi
     build:

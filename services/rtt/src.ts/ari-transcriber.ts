@@ -18,6 +18,7 @@
 import { RtpUdpServerSocket } from "./rtp-udp-server";
 import { GoogleSpeechProvider } from "./google-speech-provider";
 import { AriController } from "./ari-controller";
+import { logger } from "./logger";
 import WebSocket from "ws";
 import fs from "fs";
 import https from "https";
@@ -61,6 +62,7 @@ export class AriTranscriber {
     if (isFinal && this.wssServer) {
       this.wssServer.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
+          logger.star(text);
           client.send(text);
         }
       });

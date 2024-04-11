@@ -23,6 +23,7 @@ exports.AriTranscriber = void 0;
 const rtp_udp_server_1 = require("./rtp-udp-server");
 const google_speech_provider_1 = require("./google-speech-provider");
 const ari_controller_1 = require("./ari-controller");
+const logger_1 = require("./logger");
 const ws_1 = __importDefault(require("ws"));
 const fs_1 = __importDefault(require("fs"));
 const https_1 = __importDefault(require("https"));
@@ -54,6 +55,7 @@ class AriTranscriber {
         if (isFinal && this.wssServer) {
             this.wssServer.clients.forEach(function each(client) {
                 if (client.readyState === ws_1.default.OPEN) {
+                    logger_1.logger.star(text);
                     client.send(text);
                 }
             });

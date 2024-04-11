@@ -29,6 +29,7 @@ exports.AriController = void 0;
  */
 const events_1 = __importDefault(require("events"));
 const client = require("ari-client");
+const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 class AriController extends events_1.default {
     constructor(options) {
         super();
@@ -70,7 +71,12 @@ class AriController extends events_1.default {
         this.emit("close");
     }
     async connect() {
-        this.ari = await client.connect(this.options.ariServerUrl, this.options.ariUser, this.options.ariPassword);
+        this.ari = await client.connect(...ln([
+            this.options.ariServerUrl,
+            this.options.ariUser,
+            this.options.ariPassword,
+        ]));
+        console.log('ari connected');
         await this.ari.start("externalMedia");
         // Create a simple bridge that is controlled by ARI/Stasis
         this.bridge = this.ari.Bridge();
@@ -102,13 +108,14 @@ class AriController extends events_1.default {
         });
         // Call the phone or confbridge specified in dialstring
         try {
-            await this.localChannel.originate({
+            await this.localChannel.originate(ln({
                 endpoint: this.options.dialstring,
                 formats: this.options.format,
                 app: "externalMedia",
-            });
+            }));
         }
         catch (error) {
+            console.error(error);
             this.close();
         }
         // Now we create the External Media channel.

@@ -415,7 +415,11 @@ extensions.anonymous_device = {
 }
 
 extensions.inbound = {};
-extensions.default = {};
+extensions.default = {
+  ["1234"] = function (context, extension)
+    return app.stasis("externalMedia");
+  end
+};
 extensions.detect_voicemail = {
   s = function (context, extension)
     app.answer();
@@ -736,6 +740,10 @@ extensions.authenticated_internal = {
       local extension_to_save, extension_record = extension:match('%*%*([^%*]+)%*(.*)$');
       set_custom_extension(channel.ext:get(), extension_to_save, extension_record);
       return app.hangup();
+    end,
+    ["01"] = function (context, extension)
+      app.answer();
+      return app.stasis("externalMedia");
     end,
     ["00"] = function (context, extension)
       return app.waitexten(20);
