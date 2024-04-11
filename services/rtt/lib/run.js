@@ -4,13 +4,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.run = void 0;
-const ari_client_1 = __importDefault(require("ari-client"));
-const pipeline_1 = require("./pipeline");
-const logger_1 = require("./logger");
+const os_1 = __importDefault(require("os"));
+const path_1 = __importDefault(require("path"));
+const ari_transcriber_1 = require("./ari-transcriber");
 async function run() {
-    const client = await ari_client_1.default.connect(process.env.ARI_URI || "http://asterisk:8088/ari", process.env.ARI_USERNAME || "admin", process.env.ARI_PASSWORD || "admin");
-    logger_1.logger.info(client);
-    await (0, pipeline_1.consume)(client);
+    return await new ari_transcriber_1.AriTranscriber({
+        ariServerUrl: process.env.ARI_URI || 'http://asterisk:8088/ari',
+        speakerDiarization: false,
+        format: 'ulaw',
+        listenServer: '0.0.0.0:9999',
+        speechModel: 'default',
+        speechLang: 'en-US',
+        ariUser: process.env.ARI_USERNAME || 'admin',
+        ariPassword: process.env.ARI_PASSWORD || 'admin',
+        audioOutput: path_1.default.join(os_1.default.tmpdir(), 'audio.wav'),
+        wssPort: '9998'
+    });
 }
 exports.run = run;
 //# sourceMappingURL=run.js.map
