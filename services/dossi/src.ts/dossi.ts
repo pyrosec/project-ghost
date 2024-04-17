@@ -388,10 +388,18 @@ const piplNumberLookup = async (number, to) => {
 };
 */
 
-const twilioLookup = (phoneNumber) =>
-  twilio.lookups
+const twilioLookup = async (phoneNumber) => {
+  const response = await twilio.lookups
     .phoneNumbers(phoneNumber)
     .fetch({ type: ["carrier", "caller-name"] });
+  return {
+    callerName: response.callerName,
+    countryCode: response.countryCode,
+    phoneNumber: response.phoneNumber,
+    nationalFormat: response.nationalFormat,
+    carrier: response.carrier
+  }
+};
 
 const cursors = {};
 

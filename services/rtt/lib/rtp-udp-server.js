@@ -68,6 +68,7 @@ class RtpUdpServerSocket {
             }
         });
         this.server.on("message", (msg, rinfo) => {
+            console.log(msg);
             /* Strip the 12 byte RTP header */
             let buf = msg.slice(12);
             if (this.swap16) {

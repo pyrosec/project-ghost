@@ -26,6 +26,7 @@
 import EventEmitter from "events";
 import client = require("ari-client");
 import util from "util";
+import { logger } from "./logger";
 
 const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 
@@ -130,7 +131,10 @@ export class AriController extends EventEmitter {
     // Now we create the External Media channel.
     this.externalChannel = this.ari.Channel();
     this.externalChannel.on("StasisStart", (event, chan) => {
-      this.bridge.addChannel({ channel: chan.id });
+      (async () => {
+        await chan.answer();
+        await this.bridge.addChannel({ channel: chan.id });
+      })().catch((err) => logger.error(err));
     });
     this.externalChannel.on("StasisEnd", (event, chan) => {
       this.close();
@@ -143,7 +147,7 @@ export class AriController extends EventEmitter {
     try {
       let resp = await this.externalChannel.externalMedia({
         app: "externalMedia",
-        external_host: this.options.listenServer,
+        external_host: process.env.RTP_HOST ? process.env.RTP_HOST.split(':')[0] + ':' + this.options.listenServer.split(':')[1] : this.options.listenServer,
         format: this.options.format,
       });
       this.emit("ready");

@@ -109,7 +109,10 @@ services:
     build:
       context: ./services/rtt
       dockerfile: Dockerfile
+    ports:
+      - 9998:9998
     environment:
+      - RTP_HOST=rtt:9999
       - ARI_URI=http://asterisk:8088/ari
       - REDIS_URI=redis://redis:6379
       - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json

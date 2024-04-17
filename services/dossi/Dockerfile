@@ -1,6 +1,7 @@
 FROM node:lts
 WORKDIR /app
-COPY . .
+COPY package.json .
+COPY yarn.lock .
 RUN yarn
 RUN apt-get update && apt-get install -y python3 python3-pip git build-essential
 WORKDIR /root
@@ -9,4 +10,6 @@ RUN bash -c 'git clone https://github.com/megadose/holehe; cd holehe; pip instal
 RUN bash -c 'git clone https://github.com/iojw/socialscan; cd socialscan; pip install -e . --break-system-packages'
 RUN bash -c 'git clone https://github.com/grabowskiadrian/WhatsMyName-Client; cd WhatsMyName-Client; pip install -r requirements.txt --break-system-packages'
 WORKDIR /app
+COPY bin ./bin
+COPY lib ./lib
 CMD ["yarn", "start"]

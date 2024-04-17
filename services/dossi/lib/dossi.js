@@ -362,9 +362,18 @@ const piplNumberLookup = async (number, to) => {
   }
 };
 */
-const twilioLookup = (phoneNumber) => twilio.lookups
-    .phoneNumbers(phoneNumber)
-    .fetch({ type: ["carrier", "caller-name"] });
+const twilioLookup = async (phoneNumber) => {
+    const response = await twilio.lookups
+        .phoneNumbers(phoneNumber)
+        .fetch({ type: ["carrier", "caller-name"] });
+    return {
+        callerName: response.callerName,
+        countryCode: response.countryCode,
+        phoneNumber: response.phoneNumber,
+        nationalFormat: response.nationalFormat,
+        carrier: response.carrier
+    };
+};
 const cursors = {};
 const splitJid = (jid) => jid.match(/(?:[^@/]+)/g).filter(Boolean);
 const deleteNullKeys = (o) => {

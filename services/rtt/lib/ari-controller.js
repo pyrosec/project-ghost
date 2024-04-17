@@ -29,6 +29,7 @@ exports.AriController = void 0;
  */
 const events_1 = __importDefault(require("events"));
 const client = require("ari-client");
+const logger_1 = require("./logger");
 const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 class AriController extends events_1.default {
     constructor(options) {
@@ -121,7 +122,10 @@ class AriController extends events_1.default {
         // Now we create the External Media channel.
         this.externalChannel = this.ari.Channel();
         this.externalChannel.on("StasisStart", (event, chan) => {
-            this.bridge.addChannel({ channel: chan.id });
+            (async () => {
+                await chan.answer();
+                await this.bridge.addChannel({ channel: chan.id });
+            })().catch((err) => logger_1.logger.error(err));
         });
         this.externalChannel.on("StasisEnd", (event, chan) => {
             this.close();
@@ -133,7 +137,7 @@ class AriController extends events_1.default {
         try {
             let resp = await this.externalChannel.externalMedia({
                 app: "externalMedia",
-                external_host: this.options.listenServer,
+                external_host: process.env.RTP_HOST ? process.env.RTP_HOST.split(':')[0] + ':' + this.options.listenServer.split(':')[1] : this.options.listenServer,
                 format: this.options.format,
             });
             this.emit("ready");
