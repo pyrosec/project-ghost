@@ -320,6 +320,9 @@ function printEndatoResult(persons, send) {
     persons.forEach((v) => {
         const rows = [];
         rows.push(v.fullName + (v.age ? ' - ' + v.age : '') + (v.dob ? ' - ' + v.dob : ''));
+        const dateOfDeath = v.datesOfDeath && v.datesOfDeath[0] && v.datesOfDeath[0].dod;
+        if (dateOfDeath)
+            rows.push('Deceased (' + dateOfDeath + ')');
         if (v.emailAddresses) {
             rows.push('E-mails');
             v.emailAddresses.forEach((email) => rows.push('  - ' + email.emailAddress));
