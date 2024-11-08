@@ -94,7 +94,7 @@ export const readSipAccounts = async () => {
 export const piplQueryToObject = (query: string): any => {
   try {
     return query
-      .match(/([^\s:]+):(?:["”]((?:[^”"\\]|\\[^”"])*)[”"])|(?:\S+)/g)
+      .match(/([^\s:]+):(?:[“”"]((?:[^“”"\\]|\\[^“”"])*)[“”"])|(?:\S+)/g)
       .map((v) =>
         v.split(":").map((v) => v.replace(/[”"]/g, '')).filter(Boolean)
       ).filter(Boolean)

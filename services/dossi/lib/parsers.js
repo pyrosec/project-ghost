@@ -91,7 +91,7 @@ exports.readSipAccounts = readSipAccounts;
 const piplQueryToObject = (query) => {
     try {
         return query
-            .match(/([^\s:]+):(?:["”]((?:[^”"\\]|\\[^”"])*)[”"])|(?:\S+)/g)
+            .match(/([^\s:]+):(?:[“”"]((?:[^“”"\\]|\\[^“”"])*)[“”"])|(?:\S+)/g)
             .map((v) => v.split(":").map((v) => v.replace(/[”"]/g, '')).filter(Boolean)).filter(Boolean)
             .reduce((r, [key, value]) => {
             r[key] = value;
