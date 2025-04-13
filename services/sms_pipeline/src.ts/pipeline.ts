@@ -332,7 +332,7 @@ const POLL_INTERVAL = 10000;
 const moment = require("moment");
 
 const getOffset = () => {
-  return (isDST() ? 5 : 5)*3600;
+  return (isDST() ? 4 : 5)*3600;
 };
 const fromUnix = (unix) => {
   return moment(new Date((unix - getOffset()) * 1000)).format("YYYY-MM-DD HH:mm:ss");
