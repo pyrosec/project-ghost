@@ -675,6 +675,16 @@ extensions.stasis = {
   end
 }
 
+-- Create a stasis context for RTT
+extensions.stasis = {
+  ["s"] = function (context, extension)
+    print("RTT stasis context activated")
+    app.answer()
+    app.noop()
+    return app.hangup()
+  end
+}
+
 
 function fallback_register_handler(context, extension)
       if #channel.extcallerid:get() < 10 then
@@ -696,18 +706,18 @@ extensions.authenticated_internal = {
       -- Set channel variables for RTT
       channel.rtt_enabled = "true"
       
-      -- Create a bridge for RTT
-      print("Creating RTT bridge")
-      app.bridge("simple")
-      
-      -- Connect to the RTT bridge via Stasis application
-      -- The externalMedia application will handle the RTT bridge
+      -- Connect directly to the externalMedia Stasis application
+      -- This will allow the RTT service to handle the audio
       print("Connecting to RTT bridge via Stasis application")
       app.stasis("externalMedia")
       
-      -- Use NoOp to keep the channel open without waiting
+      -- Keep the channel open for RTT communication
       print("Keeping RTT connection open")
       app.noop()
+      
+      -- Wait for a bit to allow RTT communication
+      print("Waiting for RTT communication")
+      app.wait(10)
       
       return app.hangup()
     end,
