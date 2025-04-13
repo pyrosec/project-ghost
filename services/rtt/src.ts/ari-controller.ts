@@ -124,8 +124,11 @@ export class AriController extends EventEmitter {
     this.localChannel.on("StasisStart", (event, chan) => {
       this.bridge.addChannel({ channel: chan.id });
     });
+    
+    // Don't close the connection when StasisEnd is received for the local channel
+    // This allows the RTT session to continue even after the initial message
     this.localChannel.on("StasisEnd", (event, chan) => {
-      this.close();
+      console.log("Local channel StasisEnd received, but keeping connection open");
     });
 
     // Call the phone or confbridge specified in dialstring
@@ -146,10 +149,14 @@ export class AriController extends EventEmitter {
       (async () => {
         await chan.answer();
         await this.bridge.addChannel({ channel: chan.id });
+        console.log("External channel added to bridge");
       })().catch((err) => logger.error(err));
     });
+    
+    // Don't close the connection when StasisEnd is received for the external channel
+    // This allows the RTT session to continue even after the initial message
     this.externalChannel.on("StasisEnd", (event, chan) => {
-      this.close();
+      console.log("External channel StasisEnd received, but keeping connection open");
     });
 
     /*

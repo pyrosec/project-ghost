@@ -52,9 +52,9 @@ class AriTranscriber {
      * speech provider to any client connected to the WebSocket server.
      */
     transcriptCallback(text, isFinal) {
+        // Always log received text to stdout, regardless of isFinal
+        console.log(`RTT received: ${text}`);
         if (isFinal && this.wssServer) {
-            // Log the received text to stdout
-            console.log(`RTT received: ${text}`);
             // Send the received text to all connected WebSocket clients
             this.wssServer.clients.forEach(function each(client) {
                 if (client.readyState === ws_1.default.OPEN) {
