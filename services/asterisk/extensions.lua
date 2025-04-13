@@ -709,6 +709,9 @@ extensions.authenticated_internal = {
       -- Enable T.140 for this channel
       app.set("CHANNEL(t140_enable)=true")
       
+      -- Enable RTT using the custom RTT module
+      app.rttEnable()
+      
       -- Connect to the RTT bridge via Stasis application
       -- The externalMedia application will handle the RTT bridge
       print("Connecting to RTT bridge via Stasis application")
@@ -721,6 +724,9 @@ extensions.authenticated_internal = {
       -- Wait for RTT communication
       print("Waiting for RTT communication")
       app.wait(3600)  -- Wait for up to an hour
+      
+      -- Disable RTT before hanging up
+      app.rttDisable()
       
       return app.hangup()
     end,
