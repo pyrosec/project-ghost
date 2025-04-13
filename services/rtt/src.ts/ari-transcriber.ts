@@ -60,12 +60,24 @@ export class AriTranscriber {
    */
   transcriptCallback(text, isFinal) {
     if (isFinal && this.wssServer) {
+      // Log the received text to stdout
+      console.log(`RTT received: ${text}`);
+      
+      // Send the received text to all connected WebSocket clients
       this.wssServer.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
           logger.star(text);
           client.send(text);
         }
       });
+      
+      // Respond with "hello" when text is received
+      console.log("RTT responding: hello");
+      
+      // Send "hello" response back to the caller
+      if (this.ariController) {
+        this.ariController.sendText("hello");
+      }
     }
   }
 

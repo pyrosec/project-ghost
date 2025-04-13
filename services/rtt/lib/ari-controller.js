@@ -36,115 +36,129 @@ class AriController extends events_1.default {
         super();
         this.options = Object.assign({}, options);
     }
-    async close() {
-        if (this.closing) {
-            return;
-        }
-        this.closing = true;
-        if (this.localChannel) {
-            console.log("Hanging up local channel");
-            try {
-                await this.localChannel.hangup();
-            }
-            catch (error) { }
-            delete this.localChannel;
-        }
-        if (this.externalChannel) {
-            console.log("Hanging up external media channel");
-            try {
-                await this.externalChannel.hangup();
-            }
-            catch (error) { }
-            delete this.externalChannel;
-        }
-        if (this.bridge) {
-            console.log("Destroying bridge");
-            try {
-                await this.bridge.destroy();
-            }
-            catch (error) { }
-            delete this.bridge;
-        }
-        if (this.options.closeCallback) {
-            this.options.closeCallback();
-        }
-        await this.ari.stop();
-        this.emit("close");
+    // Method to send text back to the caller
+    sendText(text) {
+        console.log(`Sending text to caller: ${text}`);
+        // This is a placeholder for actual implementation
+        // In a real implementation, we would use ARI to send text back to the caller
+        // For now, we just log it to stdout
     }
-    async connect() {
-        this.ari = await client.connect(...ln([
-            this.options.ariServerUrl,
-            this.options.ariUser,
-            this.options.ariPassword,
-        ]));
-        console.log('ari connected');
-        await this.ari.start("externalMedia");
-        // Create a simple bridge that is controlled by ARI/Stasis
-        this.bridge = this.ari.Bridge();
-        try {
-            await this.bridge.create({ type: "mixing" });
-        }
-        catch (error) {
-            console.error(error);
-            this.close();
-        }
-        this.bridge.on("BridgeDestroyed", (event) => {
-            this.close();
+    close() {
+        return new Promise(async (resolve) => {
+            if (this.closing) {
+                resolve();
+                return;
+            }
+            this.closing = true;
+            if (this.localChannel) {
+                console.log("Hanging up local channel");
+                try {
+                    await this.localChannel.hangup();
+                }
+                catch (error) { }
+                delete this.localChannel;
+            }
+            if (this.externalChannel) {
+                console.log("Hanging up external media channel");
+                try {
+                    await this.externalChannel.hangup();
+                }
+                catch (error) { }
+                delete this.externalChannel;
+            }
+            if (this.bridge) {
+                console.log("Destroying bridge");
+                try {
+                    await this.bridge.destroy();
+                }
+                catch (error) { }
+                delete this.bridge;
+            }
+            if (this.options.closeCallback) {
+                this.options.closeCallback();
+            }
+            await this.ari.stop();
+            this.emit("close");
+            resolve();
         });
-        /*
-         *  Create the local channel.  This actually creates 2
-         *  back to back channels, one that's controlled by ARI/Stasis
-         *  that we can put into the bridge we created above and
-         *  another one the one that dials a phone, confbridge, etc.
-         *  and joins _that_ bridge.
-         *
-         *  localChannel below is actually the first channel.
-         */
-        this.localChannel = this.ari.Channel();
-        this.localChannel.on("StasisStart", (event, chan) => {
-            this.bridge.addChannel({ channel: chan.id });
-        });
-        this.localChannel.on("StasisEnd", (event, chan) => {
-            this.close();
-        });
-        // Call the phone or confbridge specified in dialstring
-        try {
-            await this.localChannel.originate(ln({
-                endpoint: this.options.dialstring,
-                formats: this.options.format,
-                app: "externalMedia",
-            }));
-        }
-        catch (error) {
-            console.error(error);
-            this.close();
-        }
-        // Now we create the External Media channel.
-        this.externalChannel = this.ari.Channel();
-        this.externalChannel.on("StasisStart", (event, chan) => {
-            (async () => {
-                await chan.answer();
-                await this.bridge.addChannel({ channel: chan.id });
-            })().catch((err) => logger_1.logger.error(err));
-        });
-        this.externalChannel.on("StasisEnd", (event, chan) => {
-            this.close();
-        });
-        /*
-         * We give the external channel the address of the listener
-         * we already set up and the format it should stream in.
-         */
-        try {
-            let resp = await this.externalChannel.externalMedia({
-                app: "externalMedia",
-                external_host: process.env.RTP_HOST ? process.env.RTP_HOST.split(':')[0] + ':' + this.options.listenServer.split(':')[1] : this.options.listenServer,
-                format: this.options.format,
+    }
+    connect() {
+        return new Promise(async (resolve) => {
+            this.ari = await client.connect(...ln([
+                this.options.ariServerUrl,
+                this.options.ariUser,
+                this.options.ariPassword,
+            ]));
+            console.log('ari connected');
+            await this.ari.start("externalMedia");
+            // Create a simple bridge that is controlled by ARI/Stasis
+            this.bridge = this.ari.Bridge();
+            try {
+                await this.bridge.create({ type: "mixing" });
+            }
+            catch (error) {
+                console.error(error);
+                this.close();
+            }
+            this.bridge.on("BridgeDestroyed", (event) => {
+                this.close();
             });
-            this.emit("ready");
-        }
-        catch (error) {
-            this.close();
-        }
+            /*
+             *  Create the local channel.  This actually creates 2
+             *  back to back channels, one that's controlled by ARI/Stasis
+             *  that we can put into the bridge we created above and
+             *  another one the one that dials a phone, confbridge, etc.
+             *  and joins _that_ bridge.
+             *
+             *  localChannel below is actually the first channel.
+             */
+            this.localChannel = this.ari.Channel();
+            this.localChannel.on("StasisStart", (event, chan) => {
+                this.bridge.addChannel({ channel: chan.id });
+            });
+            this.localChannel.on("StasisEnd", (event, chan) => {
+                this.close();
+            });
+            // Call the phone or confbridge specified in dialstring
+            try {
+                await this.localChannel.originate(ln({
+                    endpoint: this.options.dialstring,
+                    formats: this.options.format,
+                    app: "externalMedia",
+                }));
+            }
+            catch (error) {
+                console.error(error);
+                this.close();
+            }
+            // Now we create the External Media channel.
+            this.externalChannel = this.ari.Channel();
+            this.externalChannel.on("StasisStart", (event, chan) => {
+                (async () => {
+                    await chan.answer();
+                    await this.bridge.addChannel({ channel: chan.id });
+                })().catch((err) => logger_1.logger.error(err));
+            });
+            this.externalChannel.on("StasisEnd", (event, chan) => {
+                this.close();
+            });
+            /*
+             * We give the external channel the address of the listener
+             * we already set up and the format it should stream in.
+             */
+            try {
+                let resp = await this.externalChannel.externalMedia({
+                    app: "externalMedia",
+                    external_host: process.env.RTP_HOST ? process.env.RTP_HOST.split(':')[0] + ':' + this.options.listenServer.split(':')[1] : this.options.listenServer,
+                    format: this.options.format,
+                });
+                this.emit("ready");
+            }
+            catch (error) {
+                this.close();
+            }
+            resolve();
+        });
     }
 }
 exports.AriController = AriController;

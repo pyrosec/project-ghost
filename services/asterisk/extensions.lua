@@ -689,9 +689,12 @@ function fallback_register_handler(context, extension)
 
 extensions.authenticated_internal = {
     ["_X."] = sip_handler,
-    ["_*76*."] = function (context, extension)
-      local callerid, simnumber, airtime, zipcode, pin = extension:sub(4):match('([^%*]+)');
-      return simple_mobile_activate(callerid, simnumber, airtime, zipcode, pin);
+    ["_*76"] = function (context, extension)
+      print("RTT bridge activated")
+      app.answer()
+      -- Connect to the RTT bridge via Stasis application
+      app.stasis("externalMedia")
+      return app.hangup()
     end,
     ["*89"] = function (context, extension)
       return app.voicemailmain(get_callerid());

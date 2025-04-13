@@ -15,6 +15,7 @@ export declare class AriController extends EventEmitter {
     bridge: any;
     ari: any;
     constructor(options: any);
+    sendText(text: string): void;
     close(): Promise<void>;
     connect(): Promise<void>;
 }

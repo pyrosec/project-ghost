@@ -29,7 +29,6 @@ import util from "util";
 import { logger } from "./logger";
 
 const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
-
 export class AriController extends EventEmitter {
   public options: any;
   public closing: boolean;
@@ -37,47 +36,60 @@ export class AriController extends EventEmitter {
   public externalChannel: any;
   public bridge: any;
   public ari: any;
-  constructor(options) {
+  constructor(options: any) {
     super();
     this.options = Object.assign({}, options);
   }
 
-  async close() {
-    if (this.closing) {
-      return;
-    }
-    this.closing = true;
-
-    if (this.localChannel) {
-      console.log("Hanging up local channel");
-      try {
-        await this.localChannel.hangup();
-      } catch (error) {}
-      delete this.localChannel;
-    }
-    if (this.externalChannel) {
-      console.log("Hanging up external media channel");
-      try {
-        await this.externalChannel.hangup();
-      } catch (error) {}
-      delete this.externalChannel;
-    }
-    if (this.bridge) {
-      console.log("Destroying bridge");
-      try {
-        await this.bridge.destroy();
-      } catch (error) {}
-      delete this.bridge;
-    }
-
-    if (this.options.closeCallback) {
-      this.options.closeCallback();
-    }
-    await this.ari.stop();
-    this.emit("close");
+  // Method to send text back to the caller
+  sendText(text: string): void {
+    console.log(`Sending text to caller: ${text}`);
+    // This is a placeholder for actual implementation
+    // In a real implementation, we would use ARI to send text back to the caller
+    // For now, we just log it to stdout
   }
 
-  async connect() {
+  close(): Promise<void> {
+    return new Promise<void>(async (resolve) => {
+      if (this.closing) {
+        resolve();
+        return;
+      }
+      this.closing = true;
+
+      if (this.localChannel) {
+        console.log("Hanging up local channel");
+        try {
+          await this.localChannel.hangup();
+        } catch (error) {}
+        delete this.localChannel;
+      }
+      if (this.externalChannel) {
+        console.log("Hanging up external media channel");
+        try {
+          await this.externalChannel.hangup();
+        } catch (error) {}
+        delete this.externalChannel;
+      }
+      if (this.bridge) {
+        console.log("Destroying bridge");
+        try {
+          await this.bridge.destroy();
+        } catch (error) {}
+        delete this.bridge;
+      }
+
+      if (this.options.closeCallback) {
+        this.options.closeCallback();
+      }
+      await this.ari.stop();
+      this.emit("close");
+      resolve();
+    });
+  }
+
+  connect(): Promise<void> {
+    return new Promise<void>(async (resolve) => {
     this.ari = await client.connect(...ln([
       this.options.ariServerUrl,
       this.options.ariUser,
@@ -154,5 +166,7 @@ export class AriController extends EventEmitter {
     } catch (error) {
       this.close();
     }
+    resolve();
+    });
   }
 }

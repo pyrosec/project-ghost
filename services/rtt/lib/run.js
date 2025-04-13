@@ -18,6 +18,8 @@ async function run() {
         ariUser: process.env.ARI_USERNAME || 'admin',
         ariPassword: process.env.ARI_PASSWORD || 'admin',
         audioOutput: path_1.default.join(os_1.default.tmpdir(), 'audio.wav'),
+        // The dialstring is not used when connecting via Stasis app
+        // but we keep it for compatibility with the existing code
         dialstring: 'Local/1234',
         wssPort: '9998'
     });
