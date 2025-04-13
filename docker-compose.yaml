@@ -114,10 +114,15 @@ services:
     environment:
       - RTP_HOST=rtt:9999
       - ARI_URI=http://asterisk:8088/ari
+      - ARI_USERNAME=admin
+      - ARI_PASSWORD=admin
       - REDIS_URI=redis://redis:6379
       - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json
     volumes:
       - gcloud:/gcloud
+    depends_on:
+      - asterisk
+    restart: unless-stopped
   dossi:
     image: ghostdial/dossi
     build:

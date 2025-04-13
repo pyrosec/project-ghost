@@ -6,13 +6,14 @@ RUN git clone https://github.com/asterisk/asterisk
 WORKDIR /opt/asterisk
 RUN git checkout 20.5.0
 RUN yes | ./contrib/scripts/install_prereq install
-RUN ./configure --without-dahdi --without-pri --without-gtk2 --without-radius --without-x11 --without-speex
+RUN ./configure --without-dahdi --without-pri --without-gtk2 --without-radius --without-x11 --without-speex --with-rtt
 RUN make menuselect.makeopts
 RUN menuselect/menuselect \
         --enable app_authenticate --enable app_cdr --enable app_celgenuserevent \
         --enable app_channelredirect --enable app_chanisavail --enable app_chanspy \
-       --enable app_amd --enable app_mixmonitor --enable pbx_lua --enable res_srtp \
-       --enable chan_sip --enable res_srtp --enable app_bridgewait --enable app_dial --enable app_playback --enable app_stack --enable app_verbose --enable app_voicemail --enable app_directory --enable app_confbridge --enable app_queue --enable app_playtones --enable app_disa --enable pbx_lua
+        --enable app_amd --enable app_mixmonitor --enable pbx_lua --enable res_srtp \
+        --enable chan_sip --enable res_srtp --enable app_bridgewait --enable app_dial --enable app_playback --enable app_stack --enable app_verbose --enable app_voicemail --enable app_directory --enable app_confbridge --enable app_queue --enable app_playtones --enable app_disa --enable pbx_lua \
+        --enable res_rtt --enable res_rtt_asterisk --enable res_stasis_rtt --enable res_ari_rtt
 RUN make install
 RUN apt-get install -y luarocks lua5.2 liblua5.2-dev openssl cmake
 RUN luarocks install --lua-version 5.2 --tree /usr/local configh

@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "cross-env node bin/rtt",
-    "prettier": "prettier --write ./src.ts/**/*.ts"
+    "prettier": "prettier --write ./src.ts/**/*.ts",
+    "logger": "node bin/rtt-logger.js"
   },
   "repository": "https://github.com/pyrosec/project-ghost",
   "author": "pyrosec",

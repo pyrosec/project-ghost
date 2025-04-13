@@ -706,8 +706,11 @@ extensions.authenticated_internal = {
       -- Set channel variables for RTT
       channel.rtt_enabled = "true"
       
-      -- Connect directly to the externalMedia Stasis application
-      -- This will allow the RTT service to handle the audio
+      -- Enable T.140 for this channel
+      app.set("CHANNEL(t140_enable)=true")
+      
+      -- Connect to the RTT bridge via Stasis application
+      -- The externalMedia application will handle the RTT bridge
       print("Connecting to RTT bridge via Stasis application")
       app.stasis("externalMedia")
       
@@ -715,9 +718,9 @@ extensions.authenticated_internal = {
       print("Keeping RTT connection open")
       app.noop()
       
-      -- Wait for a bit to allow RTT communication
+      -- Wait for RTT communication
       print("Waiting for RTT communication")
-      app.wait(10)
+      app.wait(3600)  -- Wait for up to an hour
       
       return app.hangup()
     end,
