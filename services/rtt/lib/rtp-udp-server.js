@@ -68,16 +68,20 @@ class RtpUdpServerSocket {
             }
         });
         this.server.on("message", (msg, rinfo) => {
-            console.log(msg);
             /* Strip the 12 byte RTP header */
             let buf = msg.slice(12);
+            // Log information about the received packet
+            console.log(`Received RTP packet from ${rinfo.address}:${rinfo.port}, length: ${msg.length}, payload length: ${buf.length}`);
             if (this.swap16) {
                 buf.swap16();
             }
             if (this.fileStream) {
                 this.fileStream.write(buf);
             }
+            // Emit the data event with the audio buffer
             this.server.emit("data", buf);
+            // Log that we've processed the packet
+            console.log("Processed RTP packet and emitted data event");
         });
         this.server.on("listening", () => {
             const address = this.server.address();
