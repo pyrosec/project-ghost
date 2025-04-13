@@ -1,0 +1,111 @@
+# Project Ghost: Cline Rules
+
+This file serves as a learning journal for Project Ghost, capturing important patterns, preferences, and project intelligence that will help Cline work more effectively with the project and the user.
+
+## Project Structure Patterns
+
+1. **Service Organization**
+   - Each service has its own directory under `/services`
+   - Service directories contain Dockerfile, configuration files, and source code
+   - Custom TypeScript services follow a consistent structure with src.ts/, lib/, and bin/ directories
+
+2. **Configuration Management**
+   - Docker Compose is used for service orchestration
+   - Configuration templates are used for generating service configs at runtime
+   - Environment variables are used for service configuration
+
+3. **Development Workflow**
+   - Docker and Docker Compose are the primary development tools
+   - TypeScript is used for custom service development
+   - Node.js and Yarn are used for JavaScript/TypeScript dependencies
+
+## Critical Implementation Paths
+
+1. **Communication Flow**
+   - External requests → NGINX → Appropriate service
+   - Voice calls → Asterisk → Voicemail Pipeline (if needed)
+   - SMS messages → SMS Pipeline → Appropriate notification services
+   - XMPP messages → Prosody → Federation (if needed)
+   - Matrix messages → Synapse → Federation (if needed)
+
+2. **Authentication Flow**
+   - To be documented as more information becomes available
+
+3. **Deployment Flow**
+   - Docker Compose for local development
+   - Production deployment strategy to be documented
+
+## Project-Specific Patterns
+
+1. **Naming Conventions**
+   - Service directories use lowercase names
+   - TypeScript services use camelCase for file names
+   - Configuration files use lowercase with underscores
+
+2. **Documentation Approach**
+   - Memory Bank is the central documentation repository
+   - Documentation is organized hierarchically from project brief to specific details
+   - All significant changes and decisions should be documented
+
+## Known Challenges
+
+1. **System Integration**
+   - Multiple communication protocols must work together seamlessly
+   - Authentication across different services needs careful handling
+   - Message routing between different protocols requires clear rules
+
+2. **Accessibility Requirements**
+   - Real-time text, speech-to-text, and text-to-speech are critical features
+   - All user interfaces must be accessible
+   - Communication must be possible through multiple channels
+
+## Evolution of Project Decisions
+
+As this is the initial setup of the Memory Bank and .clinerules file, the evolution of project decisions will be documented here as the project progresses.
+
+## Tool Usage Patterns
+
+1. **Docker and Docker Compose**
+   - Used for all service management
+   - Commands: `docker-compose up -d`, `docker-compose build`, etc.
+
+2. **TypeScript Development**
+   - Custom services are written in TypeScript
+   - Compilation process: TypeScript → JavaScript → Execution
+
+3. **Google Cloud Integration**
+   - Speech services use Google Cloud APIs
+   - Authentication likely uses service accounts or API keys
+
+## User Preferences
+
+As this is the initial setup, specific user preferences will be documented here as they are discovered through interaction.
+
+## Memory Bank Maintenance
+
+1. **Update Frequency**
+   - Memory Bank should be updated after significant changes
+   - activeContext.md and progress.md should be updated most frequently
+   - All files should be reviewed when "update memory bank" is requested
+
+2. **Documentation Focus**
+   - Focus on clarity and completeness
+   - Document both what exists and what is planned
+   - Include rationale for significant decisions
+
+## Next Steps for Project Intelligence
+
+1. **Gather More Information**
+   - Understand the purpose and implementation of each service
+   - Document API endpoints and interfaces
+   - Clarify authentication and authorization mechanisms
+
+2. **Refine Documentation**
+   - Update Memory Bank files as more information becomes available
+   - Create more detailed documentation for each service
+   - Document integration points between services
+
+3. **Establish Best Practices**
+   - Define coding standards for the project
+   - Establish testing requirements
+   - Document deployment procedures
