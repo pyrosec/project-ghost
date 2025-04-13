@@ -696,15 +696,18 @@ extensions.authenticated_internal = {
       -- Set channel variables for RTT
       channel.rtt_enabled = "true"
       
+      -- Create a bridge for RTT
+      print("Creating RTT bridge")
+      app.bridge("simple")
+      
       -- Connect to the RTT bridge via Stasis application
       -- The externalMedia application will handle the RTT bridge
       print("Connecting to RTT bridge via Stasis application")
       app.stasis("externalMedia")
       
-      -- Wait for a while to keep the connection open
-      -- This prevents immediate hangup after connecting to the bridge
-      print("Waiting to keep RTT connection open")
-      app.wait(3600)  -- Wait for up to an hour
+      -- Use NoOp to keep the channel open without waiting
+      print("Keeping RTT connection open")
+      app.noop()
       
       return app.hangup()
     end,

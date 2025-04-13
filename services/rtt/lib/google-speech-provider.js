@@ -77,8 +77,10 @@ class GoogleSpeechProvider {
         this.bridgingOffset = 0;
         this.lastTranscriptWasFinal = false;
         this.streamingLimit = 25000;
+        console.log("Initializing GoogleSpeechProvider with config:", JSON.stringify(config));
         this.audioInputStreamTransform = new stream_1.Transform({
             transform: (chunk, encoding, callback) => {
+                console.log(`Received audio chunk of size ${chunk.length}`);
                 this.transformer(chunk, encoding, callback);
             },
         });
@@ -86,8 +88,11 @@ class GoogleSpeechProvider {
         this.resultsCallback = resultsCallback;
         this.startStream();
         this.socket = socket;
+        // Log when we're connecting the socket
+        console.log("Connecting socket to audio stream transform");
         // This connects the socket to the Stream Transform
         socket.pipe(this.audioInputStreamTransform);
+        console.log("Socket connected to audio stream transform");
     }
     startStream() {
         // Clear current audioInput
@@ -155,7 +160,9 @@ class GoogleSpeechProvider {
      * when we restart the stream.
      */
     transformer(chunk, encoding, callback) {
+        console.log(`Processing audio chunk in transformer, size: ${chunk.length}`);
         if (this.newStream && this.lastAudioInput.length !== 0) {
+            console.log(`Handling new stream with ${this.lastAudioInput.length} previous chunks`);
             // Approximate math to calculate time of chunks
             const chunkTime = this.streamingLimit / this.lastAudioInput.length;
             if (chunkTime !== 0) {
@@ -167,15 +174,22 @@ class GoogleSpeechProvider {
                 }
                 const chunksFromMS = Math.floor((this.finalRequestEndTime - this.bridgingOffset) / chunkTime);
                 this.bridgingOffset = Math.floor((this.lastAudioInput.length - chunksFromMS) * chunkTime);
+                console.log(`Writing ${this.lastAudioInput.length - chunksFromMS} previous chunks to recognize stream`);
                 for (let i = chunksFromMS; i < this.lastAudioInput.length; i++) {
                     this.recognizeStream.write(this.lastAudioInput[i]);
                 }
             }
             this.newStream = false;
         }
+        // Store the chunk for potential reuse
         this.audioInput.push(chunk);
+        // Write the chunk to the recognize stream if it exists
         if (this.recognizeStream) {
+            console.log(`Writing chunk to recognize stream`);
             this.recognizeStream.write(chunk);
+        }
+        else {
+            console.log(`WARNING: No recognize stream available to write to`);
         }
         callback();
     }
