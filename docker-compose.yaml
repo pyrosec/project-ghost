@@ -120,6 +120,7 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/gcloud/serviceaccount.json
     volumes:
       - gcloud:/gcloud
+    command: ["node", "bin/rtt-logger.js"]
     depends_on:
       - asterisk
     restart: unless-stopped
