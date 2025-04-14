@@ -26,19 +26,15 @@
 	<support_level>extended</support_level>
  ***/
 
+#include "rtt_compat.h"
 #include "asterisk.h"
-
 #include "asterisk/module.h"
 #include "asterisk/logger.h"
 #include "asterisk/channel.h"
-#include "asterisk/format.h"
-#include "asterisk/format_cache.h"
-#include "asterisk/frame.h"
-#include "asterisk/rtp_engine.h"
-#include "asterisk/utils.h"
 #include "asterisk/app.h"
-#include "asterisk/pbx.h"
 #include "asterisk/cli.h"
+#include "asterisk/frame.h"
+#include "asterisk/channel_hook.h"
 
 /* External functions from res_rtt.c */
 extern int ast_rtt_enable(struct ast_channel *chan);
@@ -140,8 +136,8 @@ static char *handle_cli_rtt_status(struct ast_cli_entry *e, int cmd, struct ast_
         }
         
         for (; (chan = ast_channel_iterator_next(iter)); ast_channel_unref(chan)) {
-            ast_cli(a->fd, "Channel: %s, RTT: %s\n", 
-                    ast_channel_name(chan), 
+            ast_cli(a->fd, "Channel: %s, RTT: %s\n",
+                    ast_channel_name(chan),
                     ast_rtt_is_enabled(chan) ? "Enabled" : "Disabled");
         }
         
@@ -154,8 +150,8 @@ static char *handle_cli_rtt_status(struct ast_cli_entry *e, int cmd, struct ast_
             return CLI_FAILURE;
         }
         
-        ast_cli(a->fd, "Channel: %s, RTT: %s\n", 
-                ast_channel_name(chan), 
+        ast_cli(a->fd, "Channel: %s, RTT: %s\n",
+                ast_channel_name(chan),
                 ast_rtt_is_enabled(chan) ? "Enabled" : "Disabled");
         
         ast_channel_unref(chan);
@@ -253,6 +249,12 @@ static struct ast_cli_entry cli_rtt[] = {
     AST_CLI_DEFINE(handle_cli_rtt_disable, "Disable RTT on a channel"),
 };
 
+/* Custom function for checking RTT status */
+static struct ast_custom_function rtt_is_enabled_function = {
+    .name = "RTT_IS_ENABLED",
+    .read = rtt_is_enabled_exec,
+};
+
 static int unload_module(void)
 {
     int res = 0;
@@ -294,10 +296,6 @@ static int load_module(void)
     res |= ast_register_application_xml("RTTDisable", rtt_disable_exec);
     
     /* Register dialplan function */
-    static struct ast_custom_function rtt_is_enabled_function = {
-        .name = "RTT_IS_ENABLED",
-        .read = rtt_is_enabled_exec,
-    };
     res |= ast_custom_function_register(&rtt_is_enabled_function);
     
     /* Register CLI commands */
@@ -313,4 +311,9 @@ static int load_module(void)
     return AST_MODULE_LOAD_SUCCESS;
 }
 
-AST_MODULE_INFO_STANDARD(ASTERISK_GPL_KEY, "Real-Time Text (RTT) Asterisk Integration");
+AST_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_LOAD_ORDER, "Real-Time Text (RTT) Asterisk Integration",
+    .support_level = AST_MODULE_SUPPORT_EXTENDED,
+    .load = load_module,
+    .unload = unload_module,
+    .requires = "res_rtt",
+);

@@ -29,19 +29,14 @@
 	<support_level>extended</support_level>
  ***/
 
+#include "rtt_compat.h"
 #include "asterisk.h"
-
 #include "asterisk/module.h"
 #include "asterisk/logger.h"
 #include "asterisk/channel.h"
-#include "asterisk/format.h"
-#include "asterisk/format_cache.h"
-#include "asterisk/frame.h"
 #include "asterisk/stasis.h"
 #include "asterisk/stasis_channels.h"
 #include "asterisk/json.h"
-#include "asterisk/utils.h"
-#include "asterisk/astobj2.h"
 #include "asterisk/http.h"
 #include "asterisk/ari.h"
 
@@ -86,7 +81,7 @@ static int rtt_subscription_cmp(void *obj, void *arg, int flags)
 
 /*! \brief Callback for RTT events */
 static void rtt_event_cb(void *data, struct stasis_subscription *sub,
-                        struct stasis_message *message)
+                         struct stasis_message *message)
 {
     struct rtt_subscription *rtt_sub = data;
     struct ast_json *json;
@@ -139,9 +134,9 @@ static void rtt_subscription_destroy(void *obj)
 
 /*! \brief Subscribe to RTT events */
 static void *rtt_subscribe_cb(struct ast_tcptls_session_instance *session,
-                             struct ast_ari_websocket_session *ws_session,
-                             struct ast_variable *headers,
-                             struct ast_ari_response *response)
+                              struct ast_ari_websocket_session *ws_session,
+                              struct ast_variable *headers,
+                              struct ast_ari_response *response)
 {
     struct rtt_subscription *sub;
     
@@ -181,8 +176,8 @@ static void *rtt_subscribe_cb(struct ast_tcptls_session_instance *session,
 
 /*! \brief Unsubscribe from RTT events */
 static void rtt_unsubscribe_cb(struct ast_tcptls_session_instance *session,
-                              struct ast_ari_websocket_session *ws_session,
-                              void *obj)
+                               struct ast_ari_websocket_session *ws_session,
+                               void *obj)
 {
     struct rtt_subscription *sub = obj;
     
@@ -197,9 +192,9 @@ static void rtt_unsubscribe_cb(struct ast_tcptls_session_instance *session,
 
 /*! \brief Enable RTT on a channel */
 static void rtt_enable_cb(struct ast_tcptls_session_instance *session,
-                         struct ast_variable *headers,
-                         struct ast_ari_response *response,
-                         const char *channel_id)
+                          struct ast_variable *headers,
+                          struct ast_ari_response *response,
+                          const char *channel_id)
 {
     struct ast_channel *chan;
     
@@ -225,9 +220,9 @@ static void rtt_enable_cb(struct ast_tcptls_session_instance *session,
 
 /*! \brief Disable RTT on a channel */
 static void rtt_disable_cb(struct ast_tcptls_session_instance *session,
-                          struct ast_variable *headers,
-                          struct ast_ari_response *response,
-                          const char *channel_id)
+                           struct ast_variable *headers,
+                           struct ast_ari_response *response,
+                           const char *channel_id)
 {
     struct ast_channel *chan;
     
@@ -253,9 +248,9 @@ static void rtt_disable_cb(struct ast_tcptls_session_instance *session,
 
 /*! \brief Get RTT status for a channel */
 static void rtt_status_cb(struct ast_tcptls_session_instance *session,
-                         struct ast_variable *headers,
-                         struct ast_ari_response *response,
-                         const char *channel_id)
+                          struct ast_variable *headers,
+                          struct ast_ari_response *response,
+                          const char *channel_id)
 {
     struct ast_channel *chan;
     struct ast_json *json;
@@ -269,8 +264,8 @@ static void rtt_status_cb(struct ast_tcptls_session_instance *session,
     
     /* Create JSON response */
     json = ast_json_pack("{s: s, s: b}",
-                        "channel_id", channel_id,
-                        "enabled", ast_rtt_is_enabled(chan));
+                         "channel_id", channel_id,
+                         "enabled", ast_rtt_is_enabled(chan));
     
     ast_channel_unref(chan);
     
@@ -323,8 +318,8 @@ static int load_module(void)
 {
     /* Create subscriptions container */
     rtt_subscriptions = ao2_container_alloc_hash(AO2_ALLOC_OPT_LOCK_MUTEX, 0,
-                                               17, rtt_subscription_hash,
-                                               NULL, rtt_subscription_cmp);
+                                                17, rtt_subscription_hash,
+                                                NULL, rtt_subscription_cmp);
     if (!rtt_subscriptions) {
         ast_log(LOG_ERROR, "Failed to create RTT subscriptions container\n");
         return AST_MODULE_LOAD_DECLINE;
@@ -337,6 +332,13 @@ static int load_module(void)
         return AST_MODULE_LOAD_DECLINE;
     }
     
+    AST_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_LOAD_ORDER, "Real-Time Text (RTT) ARI Integration",
+        .support_level = AST_MODULE_SUPPORT_EXTENDED,
+        .load = load_module,
+        .unload = unload_module,
+        .requires = "res_rtt,res_stasis_rtt,res_ari,res_ari_model",
+    );
+    
     if (ast_ari_websocket_add_event(&rtt_events) != 0) {
         ast_log(LOG_ERROR, "Failed to register RTT ARI websocket event\n");
         unload_module();
@@ -347,5 +349,8 @@ static int load_module(void)
     
     return AST_MODULE_LOAD_SUCCESS;
 }
-
-AST_MODULE_INFO_STANDARD(ASTERISK_GPL_KEY, "Real-Time Text (RTT) ARI Integration");
+/* Use our custom module info macro */
+RTT_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_LOAD_ORDER, "Real-Time Text (RTT) ARI Integration",
+    .support_level = AST_MODULE_SUPPORT_EXTENDED,
+    .requires = "res_rtt,res_stasis_rtt,res_ari,res_ari_model"
+);

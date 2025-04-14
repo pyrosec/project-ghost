@@ -18,7 +18,17 @@ RUN make install
 # Copy custom RTT modules
 COPY ./custom_modules/rtt /tmp/rtt
 WORKDIR /tmp/rtt
-RUN make ASTTOPDIR=/opt/asterisk && make ASTTOPDIR=/opt/asterisk install
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config
+
+# Build and install the custom modules using the Makefile
+RUN make && make install
+
+# Copy the modules to the Asterisk modules directory
+RUN cp *.so /opt/asterisk/lib/asterisk/modules/
 RUN apt-get install -y luarocks lua5.2 liblua5.2-dev openssl cmake
 RUN luarocks install --lua-version 5.2 --tree /usr/local configh
 RUN luarocks install --lua-version 5.2 --tree /usr/local luasocket

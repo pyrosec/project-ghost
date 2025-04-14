@@ -1,3 +1,30 @@
+# Makefile for RTT modules
+
+# Compiler and flags
+CC = gcc
+CFLAGS = -g -Wall -Wno-unused-result -fPIC -w -Wno-error -Wno-attributes -Wno-empty-body -Wno-return-type
+INCLUDE_FLAGS = -I/opt/asterisk/include -I/opt/asterisk/include/asterisk -I.
+LDFLAGS = -lpthread -shared
+
+# Modules to build
+MODULES = res_rtt.so res_rtt_asterisk.so res_stasis_rtt.so res_ari_rtt.so
+
+# Default target
+all: $(MODULES)
+
+# Rule for building modules
+%.so: %.c
+	$(CC) $(CFLAGS) -o $@ $< $(INCLUDE_FLAGS) $(LDFLAGS)
+
+# Install modules
+install: $(MODULES)
+	cp $(MODULES) /opt/asterisk/lib/asterisk/modules/
+
+# Clean up
+clean:
+	rm -f $(MODULES)
+
+.PHONY: all install clean
 # Makefile for Asterisk RTT modules
 # Copyright (C) 2025, Project Ghost
 

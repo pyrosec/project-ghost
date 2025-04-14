@@ -1,3 +1,76 @@
+# Project Progress
+
+## What Works
+
+- Basic project structure is in place
+- Docker Compose setup for service orchestration
+- TypeScript services for RTT, SMS pipeline, and voicemail pipeline
+- Asterisk configuration for basic telephony functionality
+
+## What's In Progress
+
+### RTT Module Compatibility
+
+We're currently working on implementing Real-Time Text (RTT) support in Asterisk 20.5.0 by adapting the RTT modules from Asterisk 15.7. We've made significant progress:
+
+1. **Compatibility Layer**: Created a robust compatibility layer (`rtt_compat.h`) that:
+   - Provides custom mutex types and operations
+   - Implements list management macros
+   - Avoids conflicts with Asterisk's internal types
+
+2. **Module Structure**: Updated all RTT modules to:
+   - Include our compatibility layer first
+   - Use forward declarations to minimize header dependencies
+   - Adapt to Asterisk 20.5.0's module system
+
+3. **Build System**: Enhanced the build process with:
+   - Custom compiler flags for compatibility
+   - Proper include paths
+   - Error handling during compilation
+
+4. **Documentation**: Maintained comprehensive documentation in the memory bank
+
+### Remaining Challenges
+
+- Asterisk 20.5.0 has significant API differences from 15.7
+- Header inclusion order causes conflicts with type definitions
+- Mutex types and initialization methods have changed
+- List macros and operations have been modified
+
+## What's Left to Build
+
+1. **Complete RTT Module Integration**:
+   - Resolve compilation issues
+   - Test RTT functionality with SIP clients
+   - Integrate with the RTT service
+
+2. **SMS Pipeline Enhancements**:
+   - Complete integration with external SMS providers
+   - Implement message routing logic
+   - Add support for multimedia messages
+
+3. **Voicemail Pipeline**:
+   - Finalize transcription service integration
+   - Implement notification delivery
+   - Add message storage and retrieval
+
+4. **User Authentication**:
+   - Implement authentication flow across services
+   - Add support for multiple authentication methods
+   - Integrate with identity providers
+
+5. **Federation Support**:
+   - Complete XMPP federation via Prosody
+   - Implement Matrix federation via Synapse
+   - Add cross-protocol message routing
+
+## Known Issues
+
+1. **RTT Module Compilation**: Currently facing compilation issues when building the RTT modules for Asterisk 20.5.0.
+
+2. **Environment Variables**: Many environment variables are not set, causing warnings during Docker Compose builds.
+
+3. **Integration Testing**: Need comprehensive testing of the communication flow between services.
 # Progress Tracking: Project Ghost
 
 ## Current Status

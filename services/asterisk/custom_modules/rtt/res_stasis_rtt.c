@@ -27,18 +27,14 @@
 	<support_level>extended</support_level>
  ***/
 
+#include "rtt_compat.h"
 #include "asterisk.h"
-
 #include "asterisk/module.h"
 #include "asterisk/logger.h"
 #include "asterisk/channel.h"
-#include "asterisk/format.h"
-#include "asterisk/format_cache.h"
-#include "asterisk/frame.h"
 #include "asterisk/stasis.h"
 #include "asterisk/stasis_channels.h"
 #include "asterisk/json.h"
-#include "asterisk/utils.h"
 
 /* External functions from res_rtt.c */
 extern int ast_rtt_enable(struct ast_channel *chan);
@@ -108,8 +104,6 @@ static void rtt_text_message_destroy(void *obj)
     
     ao2_cleanup(rtt_msg->snapshot);
     ast_free(rtt_msg->text);
-    
-    return;
 }
 
 /*! \brief Free RTT status message */
@@ -122,8 +116,6 @@ static void rtt_status_message_destroy(void *obj)
     }
     
     ao2_cleanup(rtt_msg->snapshot);
-    
-    return;
 }
 
 /*! \brief Publish RTT text received event */
@@ -309,7 +301,7 @@ static int load_module(void)
     
     /* Create message types */
     rtt_text_message_type = stasis_message_type_create("rtt:text",
-                                                     rtt_text_to_json);
+                                                      rtt_text_to_json);
     if (!rtt_text_message_type) {
         ast_log(LOG_ERROR, "Failed to create RTT text message type\n");
         unload_module();
@@ -317,7 +309,7 @@ static int load_module(void)
     }
     
     rtt_enabled_message_type = stasis_message_type_create("rtt:enabled",
-                                                        rtt_status_to_json);
+                                                         rtt_status_to_json);
     if (!rtt_enabled_message_type) {
         ast_log(LOG_ERROR, "Failed to create RTT enabled message type\n");
         unload_module();
@@ -325,7 +317,7 @@ static int load_module(void)
     }
     
     rtt_disabled_message_type = stasis_message_type_create("rtt:disabled",
-                                                         rtt_status_to_json);
+                                                          rtt_status_to_json);
     if (!rtt_disabled_message_type) {
         ast_log(LOG_ERROR, "Failed to create RTT disabled message type\n");
         unload_module();
@@ -337,4 +329,9 @@ static int load_module(void)
     return AST_MODULE_LOAD_SUCCESS;
 }
 
-AST_MODULE_INFO_STANDARD(ASTERISK_GPL_KEY, "Real-Time Text (RTT) Stasis Integration");
+AST_MODULE_INFO(ASTERISK_GPL_KEY, AST_MODFLAG_LOAD_ORDER, "Real-Time Text (RTT) Stasis Integration",
+    .support_level = AST_MODULE_SUPPORT_EXTENDED,
+    .load = load_module,
+    .unload = unload_module,
+    .requires = "res_rtt,res_stasis",
+);

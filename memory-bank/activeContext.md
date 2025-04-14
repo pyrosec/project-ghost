@@ -1,3 +1,50 @@
+# Active Context
+
+## Current Focus: RTT Module Compatibility
+
+We are currently working on implementing Real-Time Text (RTT) support in Asterisk 20.5.0 by adapting the RTT modules from Asterisk 15.7. This is a critical component for our accessibility features, particularly for users who rely on real-time text communication.
+
+### Current Status
+
+We have created a robust compatibility layer (`rtt_compat.h`) to bridge the API differences between Asterisk 15.7 and 20.5.0. Our approach focuses on maintaining the original functionality while avoiding conflicts with Asterisk's internal types and macros.
+
+### Technical Challenges and Solutions
+
+1. **Header Inclusion Order**:
+   - **Challenge**: Including Asterisk headers before our compatibility layer causes conflicts with type definitions.
+   - **Solution**: We now include our compatibility layer first and use forward declarations to minimize Asterisk header dependencies.
+
+2. **Mutex Handling**:
+   - **Challenge**: Asterisk 20.5.0 has different mutex types and initialization methods compared to 15.7.
+   - **Solution**: We've created our own mutex wrapper that uses pthread_mutex_t internally but avoids name conflicts.
+
+3. **List Management**:
+   - **Challenge**: The list macros and operations have changed between versions.
+   - **Solution**: We've implemented our own list management macros that maintain the same functionality but use different names.
+
+4. **Module Initialization**:
+   - **Challenge**: The module registration patterns differ between versions.
+   - **Solution**: We've adapted our module initialization code to work with Asterisk 20.5.0's module system.
+
+### Next Steps
+
+1. **Refine Compatibility Layer**: Update our compatibility layer to avoid conflicts with Asterisk's internal types.
+
+2. **Minimal Implementation**: Consider implementing a simplified version of the RTT modules that provides just enough functionality for our services/rtt package to work with the dialplan.
+
+3. **Build System Integration**: Adjust compiler flags and include paths to ensure proper compilation.
+
+4. **Documentation**: Continue updating the memory bank with our progress and findings.
+
+### Integration with RTT Service
+
+Once the RTT modules are working, they will integrate with our TypeScript-based RTT service:
+
+- Asterisk will handle the SIP/RTP aspects of RTT
+- The RTT service will process and manage the text data
+- Communication between Asterisk and the RTT service will occur via ARI
+
+This integration is essential for providing accessible communication options in our platform.
 # Active Context: Project Ghost
 
 ## Current Work Focus
