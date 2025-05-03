@@ -726,6 +726,13 @@ extensions.authenticated_internal = {
       text_to_speech('public telephone fallback deleted');
       return app.hangup();
     end,
+    ["*5"] = function (context, extension)
+
+      channel.text_mode = "rtt";
+      channel.text_codec = "utf-8";
+      app.AGI("agi://rtt-bridge:8080/rtt_bridge");
+      app.hangup();
+    end,
     [".*9X_"] = function (context, extension)
       local number = extension:sub(2);
       cache:set('fallback.' .. channel.sipuser:get(), number);

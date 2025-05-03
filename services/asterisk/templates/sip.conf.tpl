@@ -25,6 +25,7 @@ encryption=yes
 canreinvite=yes
 host=dynamic
 allow=ulaw
+textsupport=yes
 
 [$VOIPMS_SIP_USERNAME]
 type=friend
@@ -42,3 +43,5 @@ trustrpid=yes
 sendrpid=yes
 insecure=invite
 encryption=yes
+dtmfmode=rfc2833
+textsupport=yes

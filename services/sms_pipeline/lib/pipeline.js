@@ -324,7 +324,7 @@ const handleSms = async (sms) => {
 const POLL_INTERVAL = 10000;
 const moment = require("moment");
 const getOffset = () => {
-    return ((0, is_dst_1.default)() ? 5 : 5) * 3600;
+    return ((0, is_dst_1.default)() ? 4 : 4) * 3600;
 };
 const fromUnix = (unix) => {
     return moment(new Date((unix - getOffset()) * 1000)).format("YYYY-MM-DD HH:mm:ss");
