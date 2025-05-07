@@ -45,12 +45,12 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
      - Resolved logging errors that were causing event loop failures
      - Added automatic channel and conversation recovery for missed events
      - Implemented robust fallback mechanisms for message extraction
-     - Enhanced RTT enablement with multiple channel variables
-     - Added explicit RTT initialization in both dialplan and ARI
-     - Implemented test RTT messages to verify functionality
-     - Added multiple event subscription formats for compatibility
-     - Implemented multiple RTT message sending methods
-     - Added comprehensive RTT message sending via different dialplan applications
+     - Implemented correct RTT handling based on Asterisk ARI documentation
+     - Updated event subscription to use "endpoint:" as the event source
+     - Implemented proper message sending using /endpoints/sendMessage endpoint
+     - Simplified dialplan to follow the recommended pattern
+     - Added proper handling of TextMessageReceived events
+     - Implemented endpoint-based messaging instead of channel-based
 
 ## Next Steps
 

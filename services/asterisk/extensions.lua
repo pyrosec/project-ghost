@@ -413,37 +413,16 @@ extensions.anonymous_device = {
     text_to_speech('sip device removed');
   end,
   ["*5"] = function (context, extension)
-    -- RTT Bridge Test
+    -- RTT Bridge Test - Follow the recommended pattern from the RTT guide
     app.verbose("RTT Bridge Test: Routing call to RTT bridge AI agent");
     
     -- Answer the call first
     app.answer();
     app.verbose("Call answered");
     
-    -- Enable RTT for this channel with all possible variables
+    -- Enable RTT for this channel
     app.set("RTT_ENABLED=true");
-    app.set("RTTEXT_ENABLE=true");
-    app.set("RTTEXT_DETECT=true");
     app.verbose("RTT enabled for channel");
-    
-    -- Set channel variables for RTT
-    app.set("CHANNEL(rtt_acceptance)=accept");
-    app.verbose("RTT acceptance set to accept");
-    
-    -- Wait a moment for RTT to initialize
-    app.wait(1);
-    
-    -- Send a test RTT message using different methods
-    app.sendtext("Welcome to RTT Bridge (sendtext).");
-    app.verbose("Sent welcome message via sendtext");
-    
-    -- Try PJSIP_SEND_TEXT application
-    app.execute("PJSIP_SEND_TEXT", "Welcome to RTT Bridge (PJSIP_SEND_TEXT)");
-    app.verbose("Sent welcome message via PJSIP_SEND_TEXT");
-    
-    -- Try MESSAGE application
-    app.execute("MESSAGE", "Welcome to RTT Bridge (MESSAGE)");
-    app.verbose("Sent welcome message via MESSAGE");
     
     -- Enter the Stasis application
     return app.stasis("rtt_bridge");
@@ -456,37 +435,16 @@ extensions.default = {
     return app.stasis("externalMedia");
   end,
   ["rtt"] = function (context, extension)
-    -- Route call to RTT bridge AI agent
+    -- Follow the recommended pattern from the RTT guide
     app.verbose("Routing call to RTT bridge AI agent");
     
     -- Answer the call first
     app.answer();
     app.verbose("Call answered");
     
-    -- Enable RTT for this channel with all possible variables
+    -- Enable RTT for this channel
     app.set("RTT_ENABLED=true");
-    app.set("RTTEXT_ENABLE=true");
-    app.set("RTTEXT_DETECT=true");
     app.verbose("RTT enabled for channel");
-    
-    -- Set channel variables for RTT
-    app.set("CHANNEL(rtt_acceptance)=accept");
-    app.verbose("RTT acceptance set to accept");
-    
-    -- Wait a moment for RTT to initialize
-    app.wait(1);
-    
-    -- Send a test RTT message using different methods
-    app.sendtext("Welcome to RTT Bridge (sendtext).");
-    app.verbose("Sent welcome message via sendtext");
-    
-    -- Try PJSIP_SEND_TEXT application
-    app.execute("PJSIP_SEND_TEXT", "Welcome to RTT Bridge (PJSIP_SEND_TEXT)");
-    app.verbose("Sent welcome message via PJSIP_SEND_TEXT");
-    
-    -- Try MESSAGE application
-    app.execute("MESSAGE", "Welcome to RTT Bridge (MESSAGE)");
-    app.verbose("Sent welcome message via MESSAGE");
     
     -- Enter the Stasis application
     return app.stasis("rtt_bridge");

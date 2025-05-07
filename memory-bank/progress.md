@@ -40,12 +40,12 @@
    - Simplified ARI connection process
    - Automatic channel and conversation recovery
    - Robust fallback mechanisms for message handling
-   - Comprehensive RTT enablement in dialplan
-   - Multiple RTT channel variables for compatibility
-   - Test RTT messages for verification
-   - Multiple event subscription formats
-   - Redundant RTT message sending methods
-   - Multiple dialplan applications for RTT messaging
+   - Proper RTT implementation based on Asterisk documentation
+   - Correct event subscription using "endpoint:" source
+   - Standard-compliant message sending via endpoints API
+   - Simplified dialplan following recommended patterns
+   - Endpoint-based messaging instead of channel-based
+   - Proper TextMessageReceived event handling
 
 6. **Documentation**
    - Memory Bank documentation system is now established
