@@ -24,15 +24,23 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
    - Updated docker-compose.yaml with Asterisk ARI configuration
 
 3. **RTT Bridge Fixes**
-  - Fixed app name mismatch between extensions.lua and stasis_handler.py (using "rtt_bridge" consistently)
-  - Added explicit application registration in StasisHandler to ensure the app is registered with Asterisk
-  - Added a test extension "*5" for easy testing of the RTT bridge
-  - Updated default credentials in docker-compose.yaml for Asterisk ARI
-  - Improved error handling in StasisHandler and RTTHandler classes:
-    - Added proper error handling for non-JSON responses from Asterisk ARI
-    - Added try/catch blocks around critical operations
-    - Added detailed logging for error conditions
-    - Ensured graceful degradation when errors occur
+   - Fixed app name mismatch between extensions.lua and stasis_handler.py (using "rtt_bridge" consistently)
+   - Added explicit application registration in StasisHandler to ensure the app is registered with Asterisk
+   - Added a test extension "*5" for easy testing of the RTT bridge
+   - Updated default credentials in docker-compose.yaml for Asterisk ARI
+   - Improved error handling in StasisHandler and RTTHandler classes:
+     - Added proper error handling for non-JSON responses from Asterisk ARI
+     - Added try/catch blocks around critical operations
+     - Added detailed logging for error conditions
+     - Ensured graceful degradation when errors occur
+   - Enhanced RTT message handling:
+     - Added explicit subscription to TextMessageReceived events
+     - Added detailed logging for all ARI events
+     - Explicitly enabled RTT in the Asterisk dialplan
+     - Added comprehensive logging for incoming RTT messages
+     - Enhanced TextMessageReceived event handling based on Asterisk ARI documentation
+     - Added flexible message extraction to handle different event structures
+     - Implemented detailed logging of message object structure for diagnostics
 
 ## Next Steps
 

@@ -31,6 +31,12 @@
    - Test extension "*5" for easy testing
    - Robust error handling for ARI communication
    - Graceful degradation when errors occur
+   - Explicit subscription to TextMessageReceived events
+   - Comprehensive logging for RTT messages
+   - RTT explicitly enabled in dialplan
+   - Enhanced TextMessageReceived event handling
+   - Flexible message extraction from different event structures
+   - Detailed diagnostic logging of message objects
 
 6. **Documentation**
    - Memory Bank documentation system is now established

@@ -411,6 +411,16 @@ extensions.anonymous_device = {
     local ext = lookup_extension(channel['CALLERID(num)']:get());
     cache:hdel('devicelist.' .. ext, channel['CALLERID(num)']:get());
     text_to_speech('sip device removed');
+  end,
+  ["*5"] = function (context, extension)
+    -- RTT Bridge Test
+    app.verbose("RTT Bridge Test: Routing call to RTT bridge AI agent");
+    
+    -- Enable RTT for this channel
+    app.set("RTT_ENABLED=true");
+    app.verbose("RTT enabled for channel");
+    
+    return app.stasis("rtt_bridge");
   end
 }
 
@@ -422,6 +432,11 @@ extensions.default = {
   ["rtt"] = function (context, extension)
     -- Route call to RTT bridge AI agent
     app.verbose("Routing call to RTT bridge AI agent");
+    
+    -- Enable RTT for this channel
+    app.set("RTT_ENABLED=true");
+    app.verbose("RTT enabled for channel");
+    
     return app.stasis("rtt_bridge");
   end
 };

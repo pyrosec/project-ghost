@@ -58,6 +58,35 @@ class StasisHandler:
             # Create session
             session = aiohttp.ClientSession(auth=aiohttp.BasicAuth(self.ari_username, self.ari_password))
             
+            # First, ensure the application is registered
+            try:
+                # Check if application exists
+                app_url = f"{self.ari_url}/applications/{self.app_name}"
+                async with session.get(app_url) as response:
+                    if response.status == 404:
+                        # Application doesn't exist, create it
+                        logger.info(f"Registering Stasis application: {self.app_name}")
+                        create_url = f"{self.ari_url}/applications/{self.app_name}"
+                        async with session.post(create_url, json={"name": self.app_name}) as create_response:
+                            if create_response.status != 201:
+                                logger.error(f"Failed to create application: {await create_response.text()}")
+            except Exception as app_error:
+                logger.error(f"Error checking/creating application: {str(app_error)}")
+            
+            # Subscribe to specific events
+            try:
+                # Subscribe to TextMessageReceived events
+                logger.info("Subscribing to TextMessageReceived events")
+                subscribe_url = f"{self.ari_url}/applications/{self.app_name}/subscription"
+                event_source = "channel:TextMessageReceived"
+                async with session.post(subscribe_url, json={"eventSource": event_source}) as subscribe_response:
+                    if subscribe_response.status != 201:
+                        logger.error(f"Failed to subscribe to events: {await subscribe_response.text()}")
+                    else:
+                        logger.info(f"Successfully subscribed to {event_source} events")
+            except Exception as subscribe_error:
+                logger.error(f"Error subscribing to events: {str(subscribe_error)}")
+            
             # Connect to WebSocket
             ws_url = f"{self.ari_url}/events?api_key={self.ari_username}:{self.ari_password}&app={self.app_name}"
             self.websocket = await session.ws_connect(ws_url)
@@ -81,6 +110,10 @@ class StasisHandler:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     # Parse event
                     event = json.loads(msg.data)
+                    
+                    # Log all events for debugging
+                    event_type = event.get("type")
+                    logger.info(f"Received ARI event: {event_type}", event=str(event)[:200])
                     
                     # Process event
                     await self._process_event(event)
@@ -106,7 +139,7 @@ class StasisHandler:
         """
         event_type = event.get("type")
         
-        logger.debug("Received ARI event", type=event_type)
+        logger.info(f"Processing ARI event: {event_type}", type=event_type)
         
         if event_type == "StasisStart":
             # New channel entered our application
@@ -116,6 +149,19 @@ class StasisHandler:
             await self._handle_stasis_end(event)
         elif event_type == "TextMessageReceived":
             # Text message received from channel
+            logger.info(f"Processing TextMessageReceived event: {event}")
+            
+            # Log specific fields that should be present according to documentation
+            if "message" in event:
+                logger.info(f"Message field: {event.get('message')}")
+                if isinstance(event.get('message'), dict):
+                    if "body" in event.get('message'):
+                        logger.info(f"Message body: {event.get('message').get('body')}")
+                    if "from" in event.get('message'):
+                        logger.info(f"Message from: {event.get('message').get('from')}")
+                    if "to" in event.get('message'):
+                        logger.info(f"Message to: {event.get('message').get('to')}")
+            
             await self._handle_text_message(event)
     
     async def _handle_stasis_start(self, event: Dict[str, Any]) -> None:
@@ -205,25 +251,52 @@ class StasisHandler:
         Args:
             event: ARI event
         """
+        # Log the full event for debugging
+        logger.info(f"TextMessageReceived event: {event}")
+        
         channel_id = event.get("channel", {}).get("id")
-        message = event.get("message", {}).get("text")
         
-        if not channel_id or not message:
-            logger.error("Invalid TextMessageReceived event")
+        # Extract message text - check both possible locations based on documentation
+        message_obj = event.get("message", {})
+        message = message_obj.get("text") or message_obj.get("body")
+        
+        # Log the message object structure to help diagnose
+        logger.info(f"Message object structure: {message_obj}")
+        
+        if not channel_id:
+            logger.error(f"Invalid TextMessageReceived event - missing channel ID: {event}")
             return
+            
+        if not message:
+            # Try to extract from other possible locations
+            if "body" in event:
+                message = event.get("body")
+                logger.info(f"Found message in event.body: {message}")
+            elif "text" in event:
+                message = event.get("text")
+                logger.info(f"Found message in event.text: {message}")
+            else:
+                logger.error(f"Invalid TextMessageReceived event - missing message text: {event}")
+                return
         
-        logger.info("Text message received", channel_id=channel_id, message=message)
+        logger.info(f"Text message received: '{message}'", channel_id=channel_id, message=message)
         
         # Process message with RTT handler
         if channel_id in self.active_channels:
+            logger.info(f"Channel {channel_id} is active")
             conversation_id = self.active_channels[channel_id].get("conversation_id")
             
             if conversation_id:
+                logger.info(f"Processing message for conversation {conversation_id}")
                 await self.rtt_handler.process_stasis_message(
                     conversation_id,
                     message,
                     lambda text: self._send_text_to_channel(channel_id, text)
                 )
+            else:
+                logger.error(f"No conversation ID for channel {channel_id}")
+        else:
+            logger.error(f"Channel {channel_id} not in active channels: {list(self.active_channels.keys())}")
     
     async def _send_text_to_channel(self, channel_id: str, text: str) -> None:
         """
