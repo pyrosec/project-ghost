@@ -179,9 +179,49 @@ class StasisHandler:
             if conversation_id:
                 self.active_channels[channel_id]["conversation_id"] = conversation_id
                 
-                # Send welcome message
+                # Send welcome message via RTT
                 welcome_message = "Hello! I'm an AI assistant. How can I help you today?"
                 await self._send_text_to_channel(channel_id, welcome_message)
+                
+                # Try to explicitly enable RTT on the channel
+                try:
+                    logger.info(f"Explicitly enabling RTT on channel {channel_id}")
+                    
+                    # Set RTT variables
+                    await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                        "variable": "RTT_ENABLED",
+                        "value": "true"
+                    })
+                    
+                    await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                        "variable": "RTTEXT_ENABLE",
+                        "value": "true"
+                    })
+                    
+                    await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                        "variable": "RTTEXT_DETECT",
+                        "value": "true"
+                    })
+                    
+                    # Send a test RTT message to verify RTT is working
+                    logger.info(f"Sending test RTT message to channel {channel_id}")
+                    await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
+                        "text": "RTT is enabled. Please type your message.",
+                        "x-rtt": "true"
+                    })
+                    
+                    # Try to subscribe to TextMessageReceived events for this channel
+                    logger.info(f"Subscribing to TextMessageReceived events for channel {channel_id}")
+                    try:
+                        await self._ari_request("POST", f"/applications/{self.app_name}/subscription", {
+                            "eventSource": f"channel:{channel_id}:TextMessageReceived"
+                        })
+                        logger.info(f"Successfully subscribed to TextMessageReceived events for channel {channel_id}")
+                    except Exception as e:
+                        logger.error(f"Error subscribing to TextMessageReceived events: {str(e)}")
+                    
+                except Exception as e:
+                    logger.error(f"Error enabling RTT: {str(e)}")
         except Exception as e:
             logger.error(f"Error handling StasisStart: {str(e)}", channel_id=channel_id)
     

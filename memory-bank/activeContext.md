@@ -45,6 +45,10 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
      - Resolved logging errors that were causing event loop failures
      - Added automatic channel and conversation recovery for missed events
      - Implemented robust fallback mechanisms for message extraction
+     - Enhanced RTT enablement with multiple channel variables
+     - Added explicit RTT initialization in both dialplan and ARI
+     - Implemented test RTT messages to verify functionality
+     - Added channel-specific event subscriptions
 
 ## Next Steps
 

@@ -40,6 +40,10 @@
    - Simplified ARI connection process
    - Automatic channel and conversation recovery
    - Robust fallback mechanisms for message handling
+   - Comprehensive RTT enablement in dialplan
+   - Multiple RTT channel variables for compatibility
+   - Test RTT messages for verification
+   - Channel-specific event subscriptions
 
 6. **Documentation**
    - Memory Bank documentation system is now established

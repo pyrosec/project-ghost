@@ -416,10 +416,28 @@ extensions.anonymous_device = {
     -- RTT Bridge Test
     app.verbose("RTT Bridge Test: Routing call to RTT bridge AI agent");
     
-    -- Enable RTT for this channel
+    -- Answer the call first
+    app.answer();
+    app.verbose("Call answered");
+    
+    -- Enable RTT for this channel with all possible variables
     app.set("RTT_ENABLED=true");
+    app.set("RTTEXT_ENABLE=true");
+    app.set("RTTEXT_DETECT=true");
     app.verbose("RTT enabled for channel");
     
+    -- Set channel variables for RTT
+    app.set("CHANNEL(rtt_acceptance)=accept");
+    app.verbose("RTT acceptance set to accept");
+    
+    -- Wait a moment for RTT to initialize
+    app.wait(1);
+    
+    -- Send a test RTT message
+    app.sendtext("Welcome to RTT Bridge. Please type your message.");
+    app.verbose("Sent welcome message via RTT");
+    
+    -- Enter the Stasis application
     return app.stasis("rtt_bridge");
   end
 }
@@ -433,10 +451,28 @@ extensions.default = {
     -- Route call to RTT bridge AI agent
     app.verbose("Routing call to RTT bridge AI agent");
     
-    -- Enable RTT for this channel
+    -- Answer the call first
+    app.answer();
+    app.verbose("Call answered");
+    
+    -- Enable RTT for this channel with all possible variables
     app.set("RTT_ENABLED=true");
+    app.set("RTTEXT_ENABLE=true");
+    app.set("RTTEXT_DETECT=true");
     app.verbose("RTT enabled for channel");
     
+    -- Set channel variables for RTT
+    app.set("CHANNEL(rtt_acceptance)=accept");
+    app.verbose("RTT acceptance set to accept");
+    
+    -- Wait a moment for RTT to initialize
+    app.wait(1);
+    
+    -- Send a test RTT message
+    app.sendtext("Welcome to RTT Bridge. Please type your message.");
+    app.verbose("Sent welcome message via RTT");
+    
+    -- Enter the Stasis application
     return app.stasis("rtt_bridge");
   end
 };
