@@ -48,9 +48,10 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
      - Implemented correct RTT handling based on Asterisk ARI documentation
      - Updated event subscription to use "endpoint:" as the event source
      - Implemented proper message sending using /endpoints/sendMessage endpoint
-     - Simplified dialplan to follow the recommended pattern
      - Added proper handling of TextMessageReceived events
      - Implemented endpoint-based messaging instead of channel-based
+     - Added externalMedia initialization before RTT bridge
+     - Integrated with Asterisk's externalMedia Stasis application
 
 ## Next Steps
 

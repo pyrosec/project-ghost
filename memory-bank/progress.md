@@ -43,9 +43,10 @@
    - Proper RTT implementation based on Asterisk documentation
    - Correct event subscription using "endpoint:" source
    - Standard-compliant message sending via endpoints API
-   - Simplified dialplan following recommended patterns
    - Endpoint-based messaging instead of channel-based
    - Proper TextMessageReceived event handling
+   - Integration with externalMedia Stasis application
+   - Enhanced media handling for RTT communication
 
 6. **Documentation**
    - Memory Bank documentation system is now established

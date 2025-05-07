@@ -413,8 +413,8 @@ extensions.anonymous_device = {
     text_to_speech('sip device removed');
   end,
   ["*5"] = function (context, extension)
-    -- RTT Bridge Test - Follow the recommended pattern from the RTT guide
-    app.verbose("RTT Bridge Test: Routing call to RTT bridge AI agent");
+    -- RTT Bridge Test with externalMedia
+    app.verbose("RTT Bridge Test: Routing call to RTT bridge AI agent with externalMedia");
     
     -- Answer the call first
     app.answer();
@@ -424,7 +424,11 @@ extensions.anonymous_device = {
     app.set("RTT_ENABLED=true");
     app.verbose("RTT enabled for channel");
     
-    -- Enter the Stasis application
+    -- Set up external media first
+    app.stasis("externalMedia");
+    app.verbose("External media initialized");
+    
+    -- Enter the RTT bridge Stasis application
     return app.stasis("rtt_bridge");
   end
 }
@@ -435,8 +439,8 @@ extensions.default = {
     return app.stasis("externalMedia");
   end,
   ["rtt"] = function (context, extension)
-    -- Follow the recommended pattern from the RTT guide
-    app.verbose("Routing call to RTT bridge AI agent");
+    -- RTT with externalMedia
+    app.verbose("Routing call to RTT bridge AI agent with externalMedia");
     
     -- Answer the call first
     app.answer();
@@ -446,7 +450,11 @@ extensions.default = {
     app.set("RTT_ENABLED=true");
     app.verbose("RTT enabled for channel");
     
-    -- Enter the Stasis application
+    -- Set up external media first
+    app.stasis("externalMedia");
+    app.verbose("External media initialized");
+    
+    -- Enter the RTT bridge Stasis application
     return app.stasis("rtt_bridge");
   end
 };
