@@ -50,6 +50,9 @@ services:
       - ASTERISK_PORT=5038
       - ASTERISK_USERNAME=${ASTERISK_USERNAME}
       - ASTERISK_PASSWORD=${ASTERISK_PASSWORD}
+      - ASTERISK_ARI_URL=http://asterisk:8088/ari
+      - ASTERISK_ARI_USERNAME=${ASTERISK_ARI_USERNAME:-asterisk}
+      - ASTERISK_ARI_PASSWORD=${ASTERISK_ARI_PASSWORD:-asterisk}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - asterisk

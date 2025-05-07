@@ -19,6 +19,7 @@ import uvicorn
 from agi_server import AGIServer
 from aws_client import AWSBedrockClient
 from rtt_handler import RTTHandler
+from stasis_handler import StasisHandler
 from logger import setup_logger
 
 # Load environment variables
@@ -45,6 +46,9 @@ rtt_handler = RTTHandler(aws_client)
 # Create AGI server
 agi_server = AGIServer(rtt_handler)
 
+# Create Stasis handler
+stasis_handler = StasisHandler(rtt_handler)
+
 @app.get("/")
 async def root() -> Dict[str, str]:
     """Root endpoint"""
@@ -70,12 +74,19 @@ async def start_agi_server() -> None:
     """Start the AGI server"""
     await agi_server.start()
 
+async def start_stasis_handler() -> None:
+    """Start the Stasis handler"""
+    await stasis_handler.start()
+
 async def shutdown(signal: signal.Signals) -> None:
     """Shutdown the application gracefully"""
     logger.info(f"Received exit signal {signal.name}...")
     
     # Stop the AGI server
     await agi_server.stop()
+    
+    # Stop the Stasis handler
+    await stasis_handler.stop()
     
     # Exit
     logger.info("Application shutdown complete")
@@ -90,6 +101,9 @@ async def main() -> None:
     
     # Start the AGI server
     asyncio.create_task(start_agi_server())
+    
+    # Start the Stasis handler
+    asyncio.create_task(start_stasis_handler())
     
     # Start the FastAPI server
     config = uvicorn.Config(

@@ -30,6 +30,7 @@ class RTTHandler:
         """
         self.aws_client = aws_client
         self.active_sessions: Dict[str, Dict[str, Any]] = {}
+        self.stasis_sessions: Dict[str, Dict[str, Any]] = {}
         
         logger.info("RTT Handler initialized")
     
@@ -268,3 +269,116 @@ class RTTHandler:
             "Be patient and wait for complete thoughts before responding fully. "
             "If the user seems to be having trouble with the RTT system, offer assistance."
         )
+        
+    async def start_stasis_session(self, channel_id: str) -> str:
+        """
+        Start a new Stasis session for a channel
+        
+        Args:
+            channel_id: Asterisk channel ID
+            
+        Returns:
+            Conversation ID
+        """
+        # Generate conversation ID
+        conversation_id = str(uuid.uuid4())
+        
+        # Create session context
+        self.stasis_sessions[conversation_id] = {
+            "channel_id": channel_id,
+            "buffer": "",
+            "last_response": "",
+            "system_prompt": self._get_system_prompt()
+        }
+        
+        logger.info(
+            "Stasis RTT session started",
+            conversation_id=conversation_id,
+            channel_id=channel_id
+        )
+        
+        return conversation_id
+    
+    async def end_stasis_session(self, conversation_id: str) -> None:
+        """
+        End a Stasis session
+        
+        Args:
+            conversation_id: Conversation ID
+        """
+        if conversation_id in self.stasis_sessions:
+            channel_id = self.stasis_sessions[conversation_id]["channel_id"]
+            del self.stasis_sessions[conversation_id]
+            
+            logger.info(
+                "Stasis RTT session ended",
+                conversation_id=conversation_id,
+                channel_id=channel_id
+            )
+    
+    async def process_stasis_message(
+        self,
+        conversation_id: str,
+        message: str,
+        send_callback
+    ) -> None:
+        """
+        Process a message from a Stasis session
+        
+        Args:
+            conversation_id: Conversation ID
+            message: Message to process
+            send_callback: Callback function to send response chunks
+        """
+        if conversation_id not in self.stasis_sessions:
+            logger.error(
+                "Invalid conversation ID",
+                conversation_id=conversation_id
+            )
+            return
+        
+        logger.info(
+            "Processing Stasis message",
+            message=message,
+            conversation_id=conversation_id
+        )
+        
+        # Get session context
+        session = self.stasis_sessions[conversation_id]
+        
+        # Buffer text until we have a complete message
+        session["buffer"] += message
+        
+        # Check if we have a complete message (ends with newline or period)
+        buffer = session["buffer"]
+        if buffer.endswith("\n") or buffer.endswith(".") or True:  # Always process in Stasis mode
+            # Get system prompt
+            system_prompt = session["system_prompt"]
+            
+            # Generate response
+            response_generator = self.aws_client.generate_response(
+                buffer,
+                conversation_id,
+                system_prompt
+            )
+            
+            # Stream response
+            full_response = ""
+            async for chunk in response_generator:
+                # Send chunk via callback
+                await send_callback(chunk)
+                
+                # Accumulate full response
+                full_response += chunk
+            
+            # Store last response
+            session["last_response"] = full_response
+            
+            # Clear buffer
+            session["buffer"] = ""
+            
+            logger.info(
+                "Stasis response sent",
+                conversation_id=conversation_id,
+                response_length=len(full_response)
+            )

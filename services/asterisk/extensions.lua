@@ -418,6 +418,11 @@ extensions.inbound = {};
 extensions.default = {
   ["1234"] = function (context, extension)
     return app.stasis("externalMedia");
+  end,
+  ["rtt"] = function (context, extension)
+    -- Route call to RTT bridge AI agent
+    app.verbose("Routing call to RTT bridge AI agent");
+    return app.stasis("rtt-bridge");
   end
 };
 extensions.detect_voicemail = {
@@ -727,10 +732,12 @@ extensions.authenticated_internal = {
       return app.hangup();
     end,
     ["*5"] = function (context, extension)
-
+      -- Set RTT channel variables
       channel.text_mode = "rtt";
       channel.text_codec = "utf-8";
-      app.AGI("agi://rtt-bridge:8080/rtt_bridge");
+      -- Use Stasis bridge for RTT
+      app.answer();
+      app.stasis("rtt_bridge");
       app.hangup();
     end,
     [".*9X_"] = function (context, extension)
