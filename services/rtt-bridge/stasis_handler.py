@@ -134,32 +134,43 @@ class StasisHandler:
         
         logger.info("Channel entered application", channel_id=channel_id)
         
-        # Store channel info
-        self.active_channels[channel_id] = {
-            "id": channel_id,
-            "name": channel.get("name", "unknown"),
-            "state": channel.get("state", "unknown"),
-            "conversation_id": None
-        }
-        
-        # Answer the channel
-        await self._ari_request("POST", f"/channels/{channel_id}/answer")
-        
-        # Enable RTT on the channel
-        await self._ari_request("POST", f"/channels/{channel_id}/variable", {
-            "variable": "RTT_ENABLED",
-            "value": "true"
-        })
-        
-        # Start RTT session
-        conversation_id = await self.rtt_handler.start_stasis_session(channel_id)
-        
-        if conversation_id:
-            self.active_channels[channel_id]["conversation_id"] = conversation_id
+        try:
+            # Store channel info
+            self.active_channels[channel_id] = {
+                "id": channel_id,
+                "name": channel.get("name", "unknown"),
+                "state": channel.get("state", "unknown"),
+                "conversation_id": None
+            }
             
-            # Send welcome message
-            welcome_message = "Hello! I'm an AI assistant. How can I help you today?"
-            await self._send_text_to_channel(channel_id, welcome_message)
+            # Answer the channel
+            try:
+                answer_result = await self._ari_request("POST", f"/channels/{channel_id}/answer")
+                logger.info(f"Channel answer result: {answer_result}", channel_id=channel_id)
+            except Exception as e:
+                logger.error(f"Error answering channel: {str(e)}", channel_id=channel_id)
+            
+            # Enable RTT on the channel
+            try:
+                rtt_result = await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                    "variable": "RTT_ENABLED",
+                    "value": "true"
+                })
+                logger.info(f"RTT enable result: {rtt_result}", channel_id=channel_id)
+            except Exception as e:
+                logger.error(f"Error enabling RTT: {str(e)}", channel_id=channel_id)
+            
+            # Start RTT session
+            conversation_id = await self.rtt_handler.start_stasis_session(channel_id)
+            
+            if conversation_id:
+                self.active_channels[channel_id]["conversation_id"] = conversation_id
+                
+                # Send welcome message
+                welcome_message = "Hello! I'm an AI assistant. How can I help you today?"
+                await self._send_text_to_channel(channel_id, welcome_message)
+        except Exception as e:
+            logger.error(f"Error handling StasisStart: {str(e)}", channel_id=channel_id)
     
     async def _handle_stasis_end(self, event: Dict[str, Any]) -> None:
         """
@@ -222,10 +233,14 @@ class StasisHandler:
             channel_id: Channel ID
             text: Text to send
         """
-        await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
-            "text": text,
-            "x-rtt": "true"
-        })
+        try:
+            result = await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
+                "text": text,
+                "x-rtt": "true"
+            })
+            logger.debug(f"Send text result: {result}", channel_id=channel_id, text=text)
+        except Exception as e:
+            logger.error(f"Error sending text to channel: {str(e)}", channel_id=channel_id)
     
     async def _ari_request(self, method: str, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -242,14 +257,39 @@ class StasisHandler:
         url = f"{self.ari_url}{path}"
         
         async with aiohttp.ClientSession(auth=aiohttp.BasicAuth(self.ari_username, self.ari_password)) as session:
-            if method == "GET":
-                async with session.get(url) as response:
-                    return await response.json()
-            elif method == "POST":
-                async with session.post(url, json=data) as response:
-                    return await response.json()
-            elif method == "DELETE":
-                async with session.delete(url) as response:
-                    return await response.json()
-            else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+            try:
+                if method == "GET":
+                    async with session.get(url) as response:
+                        if response.status == 204:  # No Content
+                            return {}
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'json' in content_type:
+                            return await response.json()
+                        else:
+                            logger.warning(f"Non-JSON response from ARI: {await response.text()}")
+                            return {"status": response.status}
+                elif method == "POST":
+                    async with session.post(url, json=data) as response:
+                        if response.status == 204:  # No Content
+                            return {}
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'json' in content_type:
+                            return await response.json()
+                        else:
+                            logger.warning(f"Non-JSON response from ARI: {await response.text()}")
+                            return {"status": response.status}
+                elif method == "DELETE":
+                    async with session.delete(url) as response:
+                        if response.status == 204:  # No Content
+                            return {}
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'json' in content_type:
+                            return await response.json()
+                        else:
+                            logger.warning(f"Non-JSON response from ARI: {await response.text()}")
+                            return {"status": response.status}
+                else:
+                    raise ValueError(f"Unsupported HTTP method: {method}")
+            except Exception as e:
+                logger.error(f"Error in ARI request: {str(e)}")
+                return {"error": str(e)}

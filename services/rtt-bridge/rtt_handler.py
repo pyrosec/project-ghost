@@ -330,55 +330,70 @@ class RTTHandler:
             message: Message to process
             send_callback: Callback function to send response chunks
         """
-        if conversation_id not in self.stasis_sessions:
-            logger.error(
-                "Invalid conversation ID",
-                conversation_id=conversation_id
-            )
-            return
-        
-        logger.info(
-            "Processing Stasis message",
-            message=message,
-            conversation_id=conversation_id
-        )
-        
-        # Get session context
-        session = self.stasis_sessions[conversation_id]
-        
-        # Buffer text until we have a complete message
-        session["buffer"] += message
-        
-        # Check if we have a complete message (ends with newline or period)
-        buffer = session["buffer"]
-        if buffer.endswith("\n") or buffer.endswith(".") or True:  # Always process in Stasis mode
-            # Get system prompt
-            system_prompt = session["system_prompt"]
-            
-            # Generate response
-            response_generator = self.aws_client.generate_response(
-                buffer,
-                conversation_id,
-                system_prompt
-            )
-            
-            # Stream response
-            full_response = ""
-            async for chunk in response_generator:
-                # Send chunk via callback
-                await send_callback(chunk)
-                
-                # Accumulate full response
-                full_response += chunk
-            
-            # Store last response
-            session["last_response"] = full_response
-            
-            # Clear buffer
-            session["buffer"] = ""
+        try:
+            if conversation_id not in self.stasis_sessions:
+                logger.error(
+                    "Invalid conversation ID",
+                    conversation_id=conversation_id
+                )
+                return
             
             logger.info(
-                "Stasis response sent",
-                conversation_id=conversation_id,
-                response_length=len(full_response)
+                "Processing Stasis message",
+                message=message,
+                conversation_id=conversation_id
             )
+            
+            # Get session context
+            session = self.stasis_sessions[conversation_id]
+            
+            # Buffer text until we have a complete message
+            session["buffer"] += message
+            
+            # Check if we have a complete message (ends with newline or period)
+            buffer = session["buffer"]
+            if buffer.endswith("\n") or buffer.endswith(".") or True:  # Always process in Stasis mode
+                try:
+                    # Get system prompt
+                    system_prompt = session["system_prompt"]
+                    
+                    # Generate response
+                    response_generator = self.aws_client.generate_response(
+                        buffer,
+                        conversation_id,
+                        system_prompt
+                    )
+                    
+                    # Stream response
+                    full_response = ""
+                    async for chunk in response_generator:
+                        try:
+                            # Send chunk via callback
+                            await send_callback(chunk)
+                            
+                            # Accumulate full response
+                            full_response += chunk
+                        except Exception as e:
+                            logger.error(f"Error sending response chunk: {str(e)}", conversation_id=conversation_id)
+                            # Continue with next chunk even if one fails
+                    
+                    # Store last response
+                    session["last_response"] = full_response
+                    
+                    # Clear buffer
+                    session["buffer"] = ""
+                    
+                    logger.info(
+                        "Stasis response sent",
+                        conversation_id=conversation_id,
+                        response_length=len(full_response)
+                    )
+                except Exception as e:
+                    logger.error(f"Error generating or sending response: {str(e)}", conversation_id=conversation_id)
+                    # Try to send an error message to the user
+                    try:
+                        await send_callback("I'm sorry, I encountered an error processing your message.")
+                    except:
+                        pass
+        except Exception as e:
+            logger.error(f"Error in process_stasis_message: {str(e)}", conversation_id=conversation_id)

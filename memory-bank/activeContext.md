@@ -23,11 +23,24 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
    - Updated RTTHandler to support Stasis sessions
    - Updated docker-compose.yaml with Asterisk ARI configuration
 
+3. **RTT Bridge Fixes**
+  - Fixed app name mismatch between extensions.lua and stasis_handler.py (using "rtt_bridge" consistently)
+  - Added explicit application registration in StasisHandler to ensure the app is registered with Asterisk
+  - Added a test extension "*5" for easy testing of the RTT bridge
+  - Updated default credentials in docker-compose.yaml for Asterisk ARI
+  - Improved error handling in StasisHandler and RTTHandler classes:
+    - Added proper error handling for non-JSON responses from Asterisk ARI
+    - Added try/catch blocks around critical operations
+    - Added detailed logging for error conditions
+    - Ensured graceful degradation when errors occur
+
 ## Next Steps
 
 1. **RTT Bridge Testing**
-   - Test the RTT bridge integration with Asterisk
+   - Test the RTT bridge integration with Asterisk using the "*5" extension
    - Verify AI agent responses via RTT calls
+   - Test error handling under various failure conditions
+   - Monitor logs for any remaining issues
    - Optimize response timing and formatting for RTT communication
 
 2. **AI Agent Enhancement**

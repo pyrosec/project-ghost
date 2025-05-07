@@ -27,6 +27,10 @@
    - AWS Bedrock client for AI capabilities
    - Real-time text communication handling
    - Asterisk ARI integration for call control
+   - Automatic Stasis application registration
+   - Test extension "*5" for easy testing
+   - Robust error handling for ARI communication
+   - Graceful degradation when errors occur
 
 6. **Documentation**
    - Memory Bank documentation system is now established
@@ -36,7 +40,7 @@
 ## What's Left to Build
 
 1. **RTT Bridge Enhancements**
-   - Improve error handling for RTT communication
+   - Further improve error handling for RTT communication
    - Add support for multi-party RTT conversations
    - Implement conversation history and context preservation
    - Optimize AI response generation for RTT
