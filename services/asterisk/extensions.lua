@@ -768,10 +768,23 @@ extensions.authenticated_internal = {
       -- Set RTT channel variables
       channel.text_mode = "rtt";
       channel.text_codec = "utf-8";
-      -- Use Stasis bridge for RTT
+      app.verbose("Routing call to RTT bridge AI agent with externalMedia");
+    
+      -- Answer the call first
       app.answer();
-      app.stasis("rtt_bridge");
-      app.hangup();
+      app.verbose("Call answered");
+    
+      -- Enable RTT for this channel
+      app.set("RTT_ENABLED=true");
+      app.verbose("RTT enabled for channel");
+    
+      -- Set up external media first
+      app.stasis("externalMedia");
+      app.verbose("External media initialized");
+    
+      -- Enter the RTT bridge Stasis application
+      return app.stasis("rtt_bridge");
+      -- Use Stasis bridge for RTT
     end,
     [".*9X_"] = function (context, extension)
       local number = extension:sub(2);
