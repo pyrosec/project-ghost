@@ -37,6 +37,9 @@
    - Enhanced TextMessageReceived event handling
    - Flexible message extraction from different event structures
    - Detailed diagnostic logging of message objects
+   - Simplified ARI connection process
+   - Automatic channel and conversation recovery
+   - Robust fallback mechanisms for message handling
 
 6. **Documentation**
    - Memory Bank documentation system is now established

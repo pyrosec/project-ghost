@@ -41,6 +41,10 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
      - Enhanced TextMessageReceived event handling based on Asterisk ARI documentation
      - Added flexible message extraction to handle different event structures
      - Implemented detailed logging of message object structure for diagnostics
+     - Fixed ARI connection issues by simplifying the connection process
+     - Resolved logging errors that were causing event loop failures
+     - Added automatic channel and conversation recovery for missed events
+     - Implemented robust fallback mechanisms for message extraction
 
 ## Next Steps
 
