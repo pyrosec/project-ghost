@@ -31,7 +31,7 @@ class StasisHandler:
         self.ari_url = os.getenv("ASTERISK_ARI_URL", "http://asterisk:8088/ari")
         self.ari_username = os.getenv("ASTERISK_ARI_USERNAME", "asterisk")
         self.ari_password = os.getenv("ASTERISK_ARI_PASSWORD", "asterisk")
-        self.app_name = "rtt-bridge"
+        self.app_name = "rtt_bridge"
         self.websocket = None
         self.active_channels: Dict[str, Dict[str, Any]] = {}
         

@@ -422,7 +422,7 @@ extensions.default = {
   ["rtt"] = function (context, extension)
     -- Route call to RTT bridge AI agent
     app.verbose("Routing call to RTT bridge AI agent");
-    return app.stasis("rtt-bridge");
+    return app.stasis("rtt_bridge");
   end
 };
 extensions.detect_voicemail = {
