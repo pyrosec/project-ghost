@@ -43,7 +43,9 @@
    - Comprehensive RTT enablement in dialplan
    - Multiple RTT channel variables for compatibility
    - Test RTT messages for verification
-   - Channel-specific event subscriptions
+   - Multiple event subscription formats
+   - Redundant RTT message sending methods
+   - Multiple dialplan applications for RTT messaging
 
 6. **Documentation**
    - Memory Bank documentation system is now established

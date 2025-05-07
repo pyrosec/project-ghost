@@ -433,9 +433,17 @@ extensions.anonymous_device = {
     -- Wait a moment for RTT to initialize
     app.wait(1);
     
-    -- Send a test RTT message
-    app.sendtext("Welcome to RTT Bridge. Please type your message.");
-    app.verbose("Sent welcome message via RTT");
+    -- Send a test RTT message using different methods
+    app.sendtext("Welcome to RTT Bridge (sendtext).");
+    app.verbose("Sent welcome message via sendtext");
+    
+    -- Try PJSIP_SEND_TEXT application
+    app.execute("PJSIP_SEND_TEXT", "Welcome to RTT Bridge (PJSIP_SEND_TEXT)");
+    app.verbose("Sent welcome message via PJSIP_SEND_TEXT");
+    
+    -- Try MESSAGE application
+    app.execute("MESSAGE", "Welcome to RTT Bridge (MESSAGE)");
+    app.verbose("Sent welcome message via MESSAGE");
     
     -- Enter the Stasis application
     return app.stasis("rtt_bridge");
@@ -468,9 +476,17 @@ extensions.default = {
     -- Wait a moment for RTT to initialize
     app.wait(1);
     
-    -- Send a test RTT message
-    app.sendtext("Welcome to RTT Bridge. Please type your message.");
-    app.verbose("Sent welcome message via RTT");
+    -- Send a test RTT message using different methods
+    app.sendtext("Welcome to RTT Bridge (sendtext).");
+    app.verbose("Sent welcome message via sendtext");
+    
+    -- Try PJSIP_SEND_TEXT application
+    app.execute("PJSIP_SEND_TEXT", "Welcome to RTT Bridge (PJSIP_SEND_TEXT)");
+    app.verbose("Sent welcome message via PJSIP_SEND_TEXT");
+    
+    -- Try MESSAGE application
+    app.execute("MESSAGE", "Welcome to RTT Bridge (MESSAGE)");
+    app.verbose("Sent welcome message via MESSAGE");
     
     -- Enter the Stasis application
     return app.stasis("rtt_bridge");

@@ -210,15 +210,26 @@ class StasisHandler:
                         "x-rtt": "true"
                     })
                     
-                    # Try to subscribe to TextMessageReceived events for this channel
-                    logger.info(f"Subscribing to TextMessageReceived events for channel {channel_id}")
+                    # Try to subscribe to all TextMessageReceived events
+                    logger.info("Subscribing to all TextMessageReceived events")
                     try:
-                        await self._ari_request("POST", f"/applications/{self.app_name}/subscription", {
-                            "eventSource": f"channel:{channel_id}:TextMessageReceived"
-                        })
-                        logger.info(f"Successfully subscribed to TextMessageReceived events for channel {channel_id}")
+                        # Try different event source formats
+                        event_sources = [
+                            "message:TextMessageReceived",
+                            "channel:TextMessageReceived",
+                            "TextMessageReceived"
+                        ]
+                        
+                        for event_source in event_sources:
+                            try:
+                                await self._ari_request("POST", f"/applications/{self.app_name}/subscription", {
+                                    "eventSource": event_source
+                                })
+                                logger.info(f"Successfully subscribed to {event_source} events")
+                            except Exception as e:
+                                logger.warning(f"Could not subscribe to {event_source}: {str(e)}")
                     except Exception as e:
-                        logger.error(f"Error subscribing to TextMessageReceived events: {str(e)}")
+                        logger.error(f"Error subscribing to events: {str(e)}")
                     
                 except Exception as e:
                     logger.error(f"Error enabling RTT: {str(e)}")
@@ -380,14 +391,52 @@ class StasisHandler:
             channel_id: Channel ID
             text: Text to send
         """
+        # Try multiple methods to send text
+        methods_tried = 0
+        success = False
+        
+        # Method 1: Standard sendText
         try:
+            logger.info(f"Sending text to channel {channel_id} using sendText")
             result = await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
                 "text": text,
                 "x-rtt": "true"
             })
-            logger.debug(f"Send text result: {result}", channel_id=channel_id, text=text)
+            logger.info(f"Send text result (method 1): {result}", channel_id=channel_id)
+            methods_tried += 1
+            success = True
         except Exception as e:
-            logger.error(f"Error sending text to channel: {str(e)}", channel_id=channel_id)
+            logger.error(f"Error sending text using method 1: {str(e)}", channel_id=channel_id)
+        
+        # Method 2: Using message endpoint
+        try:
+            logger.info(f"Sending text to channel {channel_id} using message endpoint")
+            result = await self._ari_request("POST", "/messages", {
+                "to": f"channel:{channel_id}",
+                "from": "rtt-bridge",
+                "body": text
+            })
+            logger.info(f"Send text result (method 2): {result}", channel_id=channel_id)
+            methods_tried += 1
+            success = True
+        except Exception as e:
+            logger.error(f"Error sending text using method 2: {str(e)}", channel_id=channel_id)
+        
+        # Method 3: Using channel variable
+        try:
+            logger.info(f"Sending text to channel {channel_id} using channel variable")
+            result = await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                "variable": "RTTEXT_MESSAGE",
+                "value": text
+            })
+            logger.info(f"Send text result (method 3): {result}", channel_id=channel_id)
+            methods_tried += 1
+            success = True
+        except Exception as e:
+            logger.error(f"Error sending text using method 3: {str(e)}", channel_id=channel_id)
+        
+        if not success:
+            logger.error(f"Failed to send text to channel {channel_id} using {methods_tried} methods")
     
     async def _ari_request(self, method: str, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
