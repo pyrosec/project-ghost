@@ -1,0 +1,155 @@
+-- Prosody IM
+-- Copyright (C) 2008-2010 Matthew Wild
+-- Copyright (C) 2008-2010 Waqas Hussain
+-- Copyright (C) 2010 Jeff Mitchell
+--
+-- This project is MIT/X11 licensed. Please see the
+-- COPYING file in the source package for more information.
+--
+
+local max = math.max;
+
+local scram_hashers = require "util.sasl.scram".hashers;
+local usermanager = require "core.usermanager";
+local generate_uuid = require "util.uuid".generate;
+local new_sasl = require "util.sasl".new;
+local hex = require"util.hex";
+local to_hex, from_hex = hex.encode, hex.decode;
+local saslprep = require "util.encodings".stringprep.saslprep;
+local secure_equals = require "util.hashes".equals;
+
+local log = module._log;
+local host = module.host;
+
+local accounts = module:open_store("accounts");
+
+local hash_name = module:get_option_string("password_hash", "SHA-1");
+local get_auth_db = assert(scram_hashers[hash_name], "SCRAM-"..hash_name.." not supported by SASL library");
+local scram_name = "scram_"..hash_name:gsub("%-","_"):lower();
+
+-- Default; can be set per-user
+local default_iteration_count = module:get_option_number("default_iteration_count", 10000);
+
+-- define auth provider
+local provider = {};
+
+function provider.test_password(username, password)
+	log("debug", "test password for user '%s'", username);
+	local credentials = accounts:get(username) or {};
+	password = saslprep(password);
+	if not password then
+		return nil, "Password fails SASLprep.";
+	end
+
+	if credentials.password ~= nil and string.len(credentials.password) ~= 0 then
+		if not secure_equals(saslprep(credentials.password), password) then
+			return nil, "Auth failed. Provided password is incorrect.";
+		end
+
+		if provider.set_password(username, credentials.password) == nil then
+			return nil, "Auth failed. Could not set hashed password from plaintext.";
+		else
+			return true;
+		end
+	end
+
+	if credentials.iteration_count == nil or credentials.salt == nil or string.len(credentials.salt) == 0 then
+		return nil, "Auth failed. Stored salt and iteration count information is not complete.";
+	end
+
+	local valid, stored_key, server_key = get_auth_db(password, credentials.salt, credentials.iteration_count);
+
+	local stored_key_hex = to_hex(stored_key);
+	local server_key_hex = to_hex(server_key);
+
+	if valid and secure_equals(stored_key_hex, credentials.stored_key) and secure_equals(server_key_hex, credentials.server_key) then
+		return true;
+	else
+		return nil, "Auth failed. Invalid username, password, or password hash information.";
+	end
+end
+
+function provider.set_password(username, password)
+	log("debug", "set_password for username '%s'", username);
+	local account = accounts:get(username);
+	if account then
+		account.salt = generate_uuid();
+		account.iteration_count = max(account.iteration_count or 0, default_iteration_count);
+		local valid, stored_key, server_key = get_auth_db(password, account.salt, account.iteration_count);
+		if not valid then
+			return valid, stored_key;
+		end
+		local stored_key_hex = to_hex(stored_key);
+		local server_key_hex = to_hex(server_key);
+
+		account.stored_key = stored_key_hex
+		account.server_key = server_key_hex
+
+		account.password = nil;
+		return accounts:set(username, account);
+	end
+	return nil, "Account not available.";
+end
+
+function provider.user_exists(username)
+	local account = accounts:get(username);
+	if not account then
+		log("debug", "account not found for username '%s'", username);
+		return nil, "Auth failed. Invalid username";
+	end
+	return true;
+end
+
+function provider.users()
+	return accounts:users();
+end
+
+function provider.create_user(username, password)
+	if password == nil then
+		return accounts:set(username, {});
+	end
+	local salt = generate_uuid();
+	local valid, stored_key, server_key = get_auth_db(password, salt, default_iteration_count);
+	if not valid then
+		return valid, stored_key;
+	end
+	local stored_key_hex = to_hex(stored_key);
+	local server_key_hex = to_hex(server_key);
+	return accounts:set(username, {
+		stored_key = stored_key_hex, server_key = server_key_hex,
+		salt = salt, iteration_count = default_iteration_count
+	});
+end
+
+function provider.delete_user(username)
+	return accounts:set(username, nil);
+end
+
+function provider.get_sasl_handler()
+	local testpass_authentication_profile = {
+		plain_test = function(_, username, password, realm)
+			return usermanager.test_password(username, realm, password), true;
+		end,
+		[scram_name] = function(_, username)
+			local credentials = accounts:get(username);
+			if not credentials then return; end
+			if credentials.password then
+				if provider.set_password(username, credentials.password) == nil then
+					return nil, "Auth failed. Could not set hashed password from plaintext.";
+				end
+				credentials = accounts:get(username);
+				if not credentials then return; end
+			end
+
+			local stored_key, server_key = credentials.stored_key, credentials.server_key;
+			local iteration_count, salt = credentials.iteration_count, credentials.salt;
+			stored_key = stored_key and from_hex(stored_key);
+			server_key = server_key and from_hex(server_key);
+			return stored_key, server_key, iteration_count, salt, true;
+		end
+	};
+	return new_sasl(host, testpass_authentication_profile);
+end
+
+module:provides("auth", provider);
+

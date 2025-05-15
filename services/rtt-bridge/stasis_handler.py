@@ -6,6 +6,7 @@ Stasis Handler for Asterisk ARI integration
 import asyncio
 import json
 import os
+import traceback
 from typing import Dict, Any, Optional, List
 
 import aiohttp
@@ -109,7 +110,19 @@ class StasisHandler:
         """
         event_type = event.get("type")
         
-        logger.info(f"Processing ARI event: {event_type}", type=event_type)
+        # Log all events for debugging
+        logger.info(f"Processing ARI event: {event_type}")
+        logger.info(f"Full event data: {json.dumps(event)[:1000]}")
+        
+        # Check for any RTT-related fields in the event
+        rtt_related = False
+        for key, value in event.items():
+            if isinstance(value, str) and "rtt" in value.lower():
+                logger.info(f"Found RTT-related field: {key}={value}")
+                rtt_related = True
+        
+        if rtt_related:
+            logger.info("This event appears to be RTT-related")
         
         if event_type == "StasisStart":
             # New channel entered our application
@@ -121,6 +134,14 @@ class StasisHandler:
             # Text message received - handle according to RTT guide
             logger.info("Received TextMessageReceived event")
             await self._handle_text_message(event)
+        elif "text" in event_type.lower() or "rtt" in event_type.lower() or "message" in event_type.lower():
+            # This might be an RTT-related event that we're not explicitly handling
+            logger.info(f"Potential RTT-related event: {event_type}")
+            try:
+                # Try to handle it as a text message
+                await self._handle_text_message(event)
+            except Exception as e:
+                logger.error(f"Error handling potential RTT event: {str(e)}")
     
     async def _handle_stasis_start(self, event: Dict[str, Any]) -> None:
         """
@@ -249,45 +270,78 @@ class StasisHandler:
         Args:
             event: ARI event
         """
-        # Log the event
-        logger.info(f"Processing TextMessageReceived event: {event}")
+        # Log the full event for debugging
+        logger.info(f"Processing text message event: {json.dumps(event)[:1000]}")
         
         try:
-            # According to the RTT guide, TextMessageReceived events have this structure:
-            # - endpoint: The endpoint that sent the message
-            # - message: The text content of the message
-            # - technology: The technology of the endpoint (SIP, PJSIP, etc.)
+            # Extract message text using multiple approaches
+            message = None
+            channel_id = None
             
-            # Extract the message body
+            # Approach 1: Standard TextMessageReceived format
             if "message" in event and isinstance(event["message"], dict) and "body" in event["message"]:
                 message = event["message"]["body"]
-                logger.info(f"Received RTT message: '{message}'")
-            else:
-                logger.error("Invalid TextMessageReceived event format")
-                return
+                logger.info(f"Approach 1: Found message in message.body: '{message}'")
             
-            # Get the endpoint
-            if "endpoint" in event and "resource" in event["endpoint"]:
+            # Approach 2: Check for text field in message
+            if not message and "message" in event and isinstance(event["message"], dict) and "text" in event["message"]:
+                message = event["message"]["text"]
+                logger.info(f"Approach 2: Found message in message.text: '{message}'")
+            
+            # Approach 3: Check for direct text field
+            if not message and "text" in event:
+                message = event["text"]
+                logger.info(f"Approach 3: Found message in event.text: '{message}'")
+            
+            # Approach 4: Check for RTT-specific fields
+            if not message:
+                for key, value in event.items():
+                    if isinstance(key, str) and "rtt" in key.lower() and isinstance(value, str):
+                        message = value
+                        logger.info(f"Approach 4: Found message in RTT field {key}: '{message}'")
+                        break
+            
+            # Approach 5: Look for any string field that might contain a message
+            if not message:
+                for key, value in event.items():
+                    if isinstance(value, str) and len(value) > 0 and key not in ["type", "timestamp"]:
+                        message = value
+                        logger.info(f"Approach 5: Found potential message in field {key}: '{message}'")
+                        break
+            
+            # Extract channel ID using multiple approaches
+            
+            # Approach 1: Direct channel field
+            if "channel" in event and isinstance(event["channel"], dict) and "id" in event["channel"]:
+                channel_id = event["channel"]["id"]
+                logger.info(f"Found channel ID in channel.id: {channel_id}")
+            
+            # Approach 2: Check for endpoint and find associated channel
+            elif "endpoint" in event and "resource" in event["endpoint"]:
                 endpoint = event["endpoint"]["resource"]
-                logger.info(f"Message from endpoint: {endpoint}")
-            else:
-                logger.error("Missing endpoint in TextMessageReceived event")
-                return
+                logger.info(f"Found endpoint: {endpoint}")
+                
+                # Look for a channel associated with this endpoint
+                for active_channel_id, channel_data in self.active_channels.items():
+                    # Use the first active channel for now
+                    channel_id = active_channel_id
+                    logger.info(f"Using channel {channel_id} for endpoint {endpoint}")
+                    break
             
-            # Find the channel associated with this endpoint
-            # This is a simplification - in a real implementation, you'd need to track
-            # which channels are associated with which endpoints
-            channel_id = None
-            for active_channel_id, channel_data in self.active_channels.items():
-                # For now, just use the first active channel
-                channel_id = active_channel_id
-                break
+            # Approach 3: Use any active channel
+            if not channel_id and self.active_channels:
+                channel_id = next(iter(self.active_channels.keys()))
+                logger.info(f"Using first active channel: {channel_id}")
             
-            if not channel_id:
-                logger.error("No active channels found for endpoint")
+            if not message:
+                logger.error("Could not extract message from event")
                 return
                 
-            logger.info(f"Using channel {channel_id} for endpoint {endpoint}")
+            if not channel_id:
+                logger.error("Could not determine channel ID")
+                return
+                
+            logger.info(f"Extracted message: '{message}' for channel: {channel_id}")
         
             # Process message with RTT handler
             if channel_id in self.active_channels:
@@ -297,15 +351,11 @@ class StasisHandler:
                 if conversation_id:
                     logger.info(f"Processing message for conversation {conversation_id}")
                     try:
-                        # Use a callback that sends messages to the endpoint
+                        # Use a callback that sends messages directly to the channel
                         async def send_response(text):
-                            # Send response back to the endpoint that sent the message
-                            await self._ari_request("PUT", "/endpoints/sendMessage", {
-                                "to": endpoint,
-                                "from": "sip:rtt-bridge@localhost",
-                                "body": text
-                            })
-                            logger.info(f"Sent response to endpoint {endpoint}: {text}")
+                            # Send response back to the channel
+                            await self._send_text_to_channel(channel_id, text)
+                            logger.info(f"Sent response to channel {channel_id}: {text}")
                         
                         # Process the message
                         await self.rtt_handler.process_stasis_message(
@@ -328,12 +378,8 @@ class StasisHandler:
                             
                             # Process the message with the new conversation
                             async def send_response(text):
-                                await self._ari_request("PUT", "/endpoints/sendMessage", {
-                                    "to": endpoint,
-                                    "from": "sip:rtt-bridge@localhost",
-                                    "body": text
-                                })
-                                logger.info(f"Sent response to endpoint {endpoint}: {text}")
+                                await self._send_text_to_channel(channel_id, text)
+                                logger.info(f"Sent response to channel {channel_id}: {text}")
                             
                             await self.rtt_handler.process_stasis_message(
                                 conversation_id,
@@ -343,38 +389,18 @@ class StasisHandler:
                     except Exception as e:
                         logger.error(f"Error creating new conversation: {str(e)}")
             else:
-                logger.info(f"No active channel found for endpoint {endpoint}, creating new channel entry")
+                logger.info(f"Channel {channel_id} not in active channels, adding it")
                 
-                # Create a new channel entry
+                # Add to active channels
+                self.active_channels[channel_id] = {
+                    "id": channel_id,
+                    "name": f"channel-{channel_id}",
+                    "state": "unknown",
+                    "conversation_id": None
+                }
+                
+                # Create a conversation for this channel
                 try:
-                    # Try to get channel info for this endpoint
-                    channels = await self._ari_request("GET", "/channels")
-                    
-                    # Find a channel associated with this endpoint
-                    found_channel_id = None
-                    for channel in channels:
-                        if "endpoint" in channel and channel["endpoint"] == endpoint:
-                            found_channel_id = channel["id"]
-                            break
-                    
-                    if found_channel_id:
-                        channel_id = found_channel_id
-                        logger.info(f"Found channel {channel_id} for endpoint {endpoint}")
-                    else:
-                        # Generate a placeholder channel ID
-                        channel_id = f"endpoint-{endpoint.replace(':', '-')}"
-                        logger.info(f"Created placeholder channel {channel_id} for endpoint {endpoint}")
-                    
-                    # Add to active channels
-                    self.active_channels[channel_id] = {
-                        "id": channel_id,
-                        "name": endpoint,
-                        "state": "unknown",
-                        "endpoint": endpoint,
-                        "conversation_id": None
-                    }
-                    
-                    # Create a conversation for this channel
                     conversation_id = await self.rtt_handler.start_stasis_session(channel_id)
                     if conversation_id:
                         self.active_channels[channel_id]["conversation_id"] = conversation_id
@@ -382,12 +408,8 @@ class StasisHandler:
                         
                         # Process the message
                         async def send_response(text):
-                            await self._ari_request("PUT", "/endpoints/sendMessage", {
-                                "to": endpoint,
-                                "from": "sip:rtt-bridge@localhost",
-                                "body": text
-                            })
-                            logger.info(f"Sent response to endpoint {endpoint}: {text}")
+                            await self._send_text_to_channel(channel_id, text)
+                            logger.info(f"Sent response to channel {channel_id}: {text}")
                         
                         await self.rtt_handler.process_stasis_message(
                             conversation_id,
@@ -395,9 +417,10 @@ class StasisHandler:
                             send_response
                         )
                 except Exception as e:
-                    logger.error(f"Error handling endpoint {endpoint}: {str(e)}")
+                    logger.error(f"Error creating conversation for new channel: {str(e)}")
         except Exception as e:
-            logger.error(f"Error handling TextMessageReceived event: {str(e)}")
+            logger.error(f"Error handling text message event: {str(e)}")
+            logger.error(f"Exception details: {traceback.format_exc()}")
     
     async def _send_text_to_channel(self, channel_id: str, text: str) -> None:
         """
@@ -407,31 +430,62 @@ class StasisHandler:
             channel_id: Channel ID
             text: Text to send
         """
+        logger.info(f"Attempting to send text to channel {channel_id}: '{text}'")
+        
+        # Try multiple methods to send RTT text
+        success = False
+        
+        # Method 1: Direct channel sendText with RTT flag
         try:
-            # Get the endpoint associated with this channel
-            channel_info = await self._ari_request("GET", f"/channels/{channel_id}")
-            
-            if "endpoint" in channel_info:
-                endpoint = channel_info["endpoint"]
-                logger.info(f"Found endpoint {endpoint} for channel {channel_id}")
-                
-                # Send message using the endpoints/sendMessage endpoint as per the RTT guide
-                result = await self._ari_request("PUT", "/endpoints/sendMessage", {
-                    "to": endpoint,
-                    "from": "sip:rtt-bridge@localhost",
-                    "body": text
-                })
-                logger.info(f"Send text result: {result}", endpoint=endpoint, text=text)
-            else:
-                # Fallback to channel sendText if endpoint not found
-                logger.warning(f"No endpoint found for channel {channel_id}, falling back to sendText")
-                result = await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
-                    "text": text,
-                    "x-rtt": "true"
-                })
-                logger.info(f"Fallback send text result: {result}", channel_id=channel_id, text=text)
+            logger.info(f"Method 1: Using channel sendText with RTT flag")
+            result = await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
+                "text": text,
+                "x-rtt": "true"
+            })
+            logger.info(f"Method 1 result: {result}")
+            success = True
         except Exception as e:
-            logger.error(f"Error sending text to channel: {str(e)}", channel_id=channel_id)
+            logger.error(f"Method 1 failed: {str(e)}")
+        
+        # Method 2: Direct channel sendText without RTT flag
+        if not success:
+            try:
+                logger.info(f"Method 2: Using channel sendText without RTT flag")
+                result = await self._ari_request("POST", f"/channels/{channel_id}/sendText", {
+                    "text": text
+                })
+                logger.info(f"Method 2 result: {result}")
+                success = True
+            except Exception as e:
+                logger.error(f"Method 2 failed: {str(e)}")
+        
+        # Method 3: Using channel variable
+        if not success:
+            try:
+                logger.info(f"Method 3: Using channel variable")
+                result = await self._ari_request("POST", f"/channels/{channel_id}/variable", {
+                    "variable": "RTTEXT_MESSAGE",
+                    "value": text
+                })
+                logger.info(f"Method 3 result: {result}")
+                success = True
+            except Exception as e:
+                logger.error(f"Method 3 failed: {str(e)}")
+        
+        # Method 4: Using playback with speech
+        if not success:
+            try:
+                logger.info(f"Method 4: Using playback with speech")
+                result = await self._ari_request("POST", f"/channels/{channel_id}/play", {
+                    "media": f"sound:say:{text}"
+                })
+                logger.info(f"Method 4 result: {result}")
+                success = True
+            except Exception as e:
+                logger.error(f"Method 4 failed: {str(e)}")
+        
+        if not success:
+            logger.error(f"All methods failed to send text to channel {channel_id}")
     
     async def _ari_request(self, method: str, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

@@ -40,13 +40,13 @@
    - Simplified ARI connection process
    - Automatic channel and conversation recovery
    - Robust fallback mechanisms for message handling
-   - Proper RTT implementation based on Asterisk documentation
-   - Correct event subscription using "endpoint:" source
-   - Standard-compliant message sending via endpoints API
-   - Endpoint-based messaging instead of channel-based
-   - Proper TextMessageReceived event handling
+   - Comprehensive RTT debugging and diagnostics
+   - Multiple RTT message extraction methods
+   - Multiple RTT text sending approaches
+   - Detailed event logging for troubleshooting
+   - Enhanced error handling with stack traces
+   - RTT-related field detection in all events
    - Integration with externalMedia Stasis application
-   - Enhanced media handling for RTT communication
 
 6. **Documentation**
    - Memory Bank documentation system is now established

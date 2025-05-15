@@ -1,0 +1,13 @@
+return {
+  _all = {
+  },
+  default = {
+    ["exclude-tags"] = "mod_bosh,storage,SLOW";
+  };
+  bosh = {
+    tags = "mod_bosh";
+  };
+  storage = {
+    tags = "storage";
+  };
+}

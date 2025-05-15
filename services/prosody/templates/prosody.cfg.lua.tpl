@@ -88,8 +88,11 @@ modules_enabled = {
 --		"proxy65"; -- Enables a file transfer proxy service which clients behind NAT can use
 --		"sms";
 		"mam";
-                "smacks";
+		              "smacks";
 		"cloud_notify";
+		"push";
+		"push_http";
+		"unified_push";
 }
 
 archive_expires_after = "never";

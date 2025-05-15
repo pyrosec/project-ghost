@@ -25,6 +25,7 @@ export TLS_PRIVATE_KEY=/etc/letsencrypt/live/${DOMAIN}/privkey.pem
 
 cat /templates/prosody.cfg.lua.tpl | envsubst > /usr/local/etc/prosody/prosody.cfg.lua
 cat /templates/server.cfg.lua.tpl | envsubst >> /usr/local/etc/prosody/prosody.cfg.lua
+cat /templates/push_notification.cfg.lua.tpl | envsubst >> /usr/local/etc/prosody/prosody.cfg.lua
 
 prosodyctl register voicemail ${DOMAIN} ${ROOT_PASSWORD}
 prosodyctl register dossi ${DOMAIN} ${ROOT_PASSWORD}
