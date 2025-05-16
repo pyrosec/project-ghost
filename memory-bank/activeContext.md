@@ -6,7 +6,13 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
 
 ## Recent Changes
 
-1. **Memory Bank Initialization**
+1. **SMS Pipeline Enhancement**
+   - Implemented phone number rewriting feature using Redis keys
+   - Added support for routing messages through separate XMPP accounts
+   - Created documentation for the SMS rewriting feature (sms_rewriting.md)
+   - Updated progress.md to reflect the new capabilities
+
+2. **Memory Bank Initialization**
    - Created the memory-bank directory structure
    - Established core documentation files:
      - projectbrief.md
@@ -55,7 +61,13 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
 
 ## Next Steps
 
-1. **RTT Bridge Testing**
+1. **SMS Rewriting Testing**
+   - Test the new SMS rewriting feature with real phone numbers
+   - Verify proper routing of messages through separate XMPP accounts
+   - Test edge cases and error handling
+   - Monitor logs for any issues with the implementation
+
+2. **RTT Bridge Testing**
    - Test the RTT bridge integration with Asterisk using the "*5" extension
    - Verify AI agent responses via RTT calls
    - Test error handling under various failure conditions
@@ -71,10 +83,16 @@ The current focus is on integrating the RTT (Real-Time Text) bridge with Asteris
    - Connect the RTT bridge to the SMS pipeline for cross-channel communication
    - Integrate with voicemail services for AI-powered voicemail responses
    - Explore integration with other communication channels
+   - Extend the rewriting feature to other communication channels
 
 ## Active Decisions and Considerations
 
-1. **RTT Communication Strategy**
+1. **SMS Privacy Strategy**
+   - Decision: Implement phone number rewriting using Redis keys
+   - Rationale: Provides flexible routing without modifying core SMS handling
+   - Impact: Enables private conversations through separate XMPP accounts
+
+2. **RTT Communication Strategy**
    - Decision: Use Stasis application for RTT bridge integration
    - Rationale: Provides real-time communication capabilities with Asterisk
    - Impact: Enables AI-powered conversations via RTT calls

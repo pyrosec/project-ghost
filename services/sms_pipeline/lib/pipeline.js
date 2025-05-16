@@ -267,6 +267,23 @@ const handleSms = async (sms) => {
         ...sms
     };
     try {
+        // Check for rewrite rule for this specific sender/recipient combination
+        const rewriteKey = `rewrite.${sms.from}.${sms.to}`;
+        const rewriteUsername = await redis.get(rewriteKey);
+        if (rewriteUsername) {
+            // We have a rewrite rule - use the username instead of the phone number
+            logger_1.logger.info(`REWRITE IN (${sms.from} => ${sms.to} as ${rewriteUsername})`);
+            // Store in database with original values
+            await insertToDatabase(sms);
+            // Push to Redis with the username as recipient
+            const domain = process.env.XMPP_DOMAIN || 'pyrosec.is';
+            await redis.rpush(SMS_IN_CHANNEL, JSON.stringify({
+                ...sms,
+                recipient: `${rewriteUsername}@${domain}`
+            }));
+            // Don't forward this SMS if sms-fallback is set
+            return;
+        }
         if (await fallbackForDID(sms.to) === sms.from) {
             let matches = sms.message.match(/tag\s+(.*$)/i);
             if (matches) {
@@ -447,6 +464,14 @@ const flushOne = async (msg) => {
     if (!msg)
         return false;
     const decoded = mutateCoerceAttachments(JSON.parse(toString(msg)));
+    // Check if there's a rewrite rule for the source
+    const rewriteKey = `rewrite.${decoded.from}`;
+    const rewriteDID = await redis.get(rewriteKey);
+    if (rewriteDID) {
+        // We have a rewrite rule - use the DID instead of the original source
+        logger_1.logger.info(`REWRITE OUT (${decoded.from} as ${rewriteDID} => ${decoded.to})`);
+        decoded.from = rewriteDID;
+    }
     logger_1.logger.info("OUT (" + decoded.from + " => " + decoded.to + ")");
     await insertToDatabase(decoded);
     if ((decoded.message || "").length > 160 || decoded.attachments.length)

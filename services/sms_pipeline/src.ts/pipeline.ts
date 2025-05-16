@@ -277,6 +277,28 @@ const handleSms = async (sms) => {
     ...sms
   };
   try {
+    // Check for rewrite rule for this specific sender/recipient combination
+    const rewriteKey = `rewrite.${sms.from}.${sms.to}`;
+    const rewriteUsername = await redis.get(rewriteKey);
+    
+    if (rewriteUsername) {
+      // We have a rewrite rule - use the username instead of the phone number
+      logger.info(`REWRITE IN (${sms.from} => ${sms.to} as ${rewriteUsername})`);
+      
+      // Store in database with original values
+      await insertToDatabase(sms);
+      
+      // Push to Redis with the username as recipient
+      const domain = process.env.XMPP_DOMAIN || 'pyrosec.is';
+      await redis.rpush(SMS_IN_CHANNEL, JSON.stringify({
+        ...sms,
+        recipient: `${rewriteUsername}@${domain}`
+      }));
+      
+      // Don't forward this SMS if sms-fallback is set
+      return;
+    }
+    
     if (await fallbackForDID(sms.to) === sms.from) {
       let matches = sms.message.match(/tag\s+(.*$)/i);
       if (matches) {
@@ -284,8 +306,8 @@ const handleSms = async (sms) => {
         let data = await getTagData(tag);
         if (data && data[0] !== sms.to) data = null;
         return await sendSMPP({ to: sms.from, from: sms.to, message: data ? data.join(':') : 'nothing here ghost' });
-      }  
-      matches = sms.message.match(/(^\w{4})\s+(.*$)/);  
+      }
+      matches = sms.message.match(/(^\w{4})\s+(.*$)/);
       if (matches) {
         const tag = matches[1].toLowerCase();
         const target = await getTagData(tag);
@@ -463,6 +485,17 @@ const mutateCoerceAttachments = (msg) => {
 const flushOne = async (msg) => {
   if (!msg) return false;
   const decoded = mutateCoerceAttachments(JSON.parse(toString(msg)));
+  
+  // Check if there's a rewrite rule for the source
+  const rewriteKey = `rewrite.${decoded.from}`;
+  const rewriteDID = await redis.get(rewriteKey);
+  
+  if (rewriteDID) {
+    // We have a rewrite rule - use the DID instead of the original source
+    logger.info(`REWRITE OUT (${decoded.from} as ${rewriteDID} => ${decoded.to})`);
+    decoded.from = rewriteDID;
+  }
+  
   logger.info("OUT (" + decoded.from + " => " + decoded.to + ")");
   await insertToDatabase(decoded);
   if ((decoded.message || "").length > 160 || decoded.attachments.length)
