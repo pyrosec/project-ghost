@@ -466,6 +466,30 @@ extensions.anonymous_device = {
     
     -- Enter the RTT bridge Stasis application
     return app.stasis("rtt_bridge");
+  end,
+  ["*6"] = function (context, extension)
+    -- Ghoul Bridge DTMF Handler with externalMedia
+    app.verbose("Routing call to Ghoul Bridge DTMF handler");
+    
+    -- Answer the call first
+    app.answer();
+    app.verbose("Call answered");
+    
+    -- Set DTMF variables
+    channel["DYNAMIC_FEATURES"] = "all";
+    channel["FEATUREMAP_DIGIT"] = "*";
+    channel["FEATURE_DIGIT_TIMEOUT"] = tostring(DTMF_TIMEOUT);
+    channel["dtmf_features"] = "H";
+    channel["FEATUREMAP_CONTEXT"] = "featuremap_context";
+    
+    app.verbose("DTMF detection enabled");
+    
+    -- Set up external media first
+    app.stasis("externalMedia");
+    app.verbose("External media initialized");
+    
+    -- Enter the Ghoul Bridge Stasis application
+    return app.stasis("ghoulbridge");
   end
 }
 
@@ -492,6 +516,30 @@ extensions.default = {
     
     -- Enter the RTT bridge Stasis application
     return app.stasis("rtt_bridge");
+  end,
+  ["dtmf"] = function (context, extension)
+    -- Ghoul Bridge DTMF Handler with externalMedia
+    app.verbose("Routing call to Ghoul Bridge DTMF handler");
+    
+    -- Answer the call first
+    app.answer();
+    app.verbose("Call answered");
+    
+    -- Set DTMF variables
+    channel["DYNAMIC_FEATURES"] = "all";
+    channel["FEATUREMAP_DIGIT"] = "*";
+    channel["FEATURE_DIGIT_TIMEOUT"] = tostring(DTMF_TIMEOUT);
+    channel["dtmf_features"] = "H";
+    channel["FEATUREMAP_CONTEXT"] = "featuremap_context";
+    
+    app.verbose("DTMF detection enabled");
+    
+    -- Set up external media first
+    app.stasis("externalMedia");
+    app.verbose("External media initialized");
+    
+    -- Enter the Ghoul Bridge Stasis application
+    return app.stasis("ghoulbridge");
   end
 };
 extensions.detect_voicemail = {
@@ -1217,7 +1265,17 @@ extensions.featuremap_context = {
 
 -- Define the actual featuremap function that Asterisk calls
 function extensions.featuremap(context, extension)
-  app.verbose("Feature map called with: " .. extension)
-  return handle_dtmf_sequence(context, extension, extension)
+  app.verbose("Feature map called with: " .. extension);
+  
+  -- Check if we're in a ghoulbridge session
+  if channel.STASISAPP and channel.STASISAPP:get() == "ghoulbridge" then
+    -- Let the ghoulbridge handle it
+    app.verbose("Routing DTMF to ghoulbridge");
+    return app.stasis("ghoulbridge", extension);
+  else
+    -- Use the local handler
+    app.verbose("Using local DTMF handler");
+    return handle_dtmf_sequence(context, extension, extension);
+  end
 end
 -- Use standard Asterisk feature handling instead of custom featuremap context

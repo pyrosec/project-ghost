@@ -57,6 +57,28 @@ services:
     depends_on:
       - asterisk
     restart: unless-stopped
+  ghoulbridge:
+    build:
+      context: ./services/ghoulbridge
+      dockerfile: Dockerfile
+    volumes:
+      - logs:/app/logs
+    ports:
+      - "8086:8086"
+    environment:
+      - REDIS_URI=redis://redis:6379
+      - ASTERISK_HOST=asterisk
+      - ASTERISK_PORT=5038
+      - ASTERISK_USERNAME=${ASTERISK_USERNAME}
+      - ASTERISK_PASSWORD=${ASTERISK_PASSWORD}
+      - ASTERISK_ARI_URL=http://asterisk:8088/ari
+      - ASTERISK_ARI_USERNAME=${ASTERISK_ARI_USERNAME:-asterisk}
+      - ASTERISK_ARI_PASSWORD=${ASTERISK_ARI_PASSWORD:-asterisk}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - asterisk
+      - redis
+    restart: unless-stopped
   fail2ban:
     image: ghostdial/fail2ban
     build:
