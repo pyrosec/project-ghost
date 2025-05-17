@@ -6,9 +6,7 @@ local json = require 'rapidjson';
 local ltn12 = require 'ltn12';
 local redis = require 'redis';
 
--- Global variables for call parking
-local parked_calls = {}
-local bridged_calls = {}
+-- Use Redis for call parking and bridging state management instead of in-memory tables
 
 
 local lua_print = print;
@@ -186,12 +184,6 @@ function dial(target, timeout, options)
   elseif not options:find("K") then
     options = options .. "K"  -- Add K option for DTMF feature detection
   end
-  
-  -- Set the feature context to our custom featuremap
-  app.setvar("DYNAMIC_FEATURES", "all")
-  app.setvar("FEATUREMAP_DIGIT", "*")
-  app.setvar("FEATURE_DIGIT_TIMEOUT", "5000")
-  app.setvar("FEATUREMAP_CONTEXT", "featuremap_context")
   
   -- Call the original dial function
   app.dial(target, timeout, options);
@@ -821,9 +813,14 @@ function bridge_held_call(context, extension)
   -- Bridge the channels
   print("Bridging channels " .. current_channel_id .. " and " .. held_channel_id)
   
-  -- Store the bridge information
-  bridged_calls[current_channel_id] = held_channel_id
-  bridged_calls[held_channel_id] = current_channel_id
+  -- Store the bridge information in Redis
+  local bridge_key = 'bridge:' .. current_channel_id
+  cache:set(bridge_key, held_channel_id)
+  cache:set('bridge:' .. held_channel_id, current_channel_id)
+  
+  -- Set expiration for bridge keys (24 hours)
+  cache:expire(bridge_key, 86400)
+  cache:expire('bridge:' .. held_channel_id, 86400)
   
   -- Create a bridge and add both channels
   local bridge_id = "bridge_" .. current_channel_id .. "_" .. held_channel_id
@@ -838,16 +835,24 @@ function park_call(context, extension, park_id)
   
   -- Store the current channel ID with the park ID
   local current_channel_id = channel.UNIQUEID:get()
+  local parker = channel.sipuser:get()
+  local timestamp = os.time()
   
-  -- Store in Redis
-  cache:set('parked_call.' .. park_id, current_channel_id)
+  -- Store all information in Redis
+  local park_key = 'parked_call:' .. park_id
+  cache:set(park_key, current_channel_id)
   
-  -- Add to local tracking
-  parked_calls[park_id] = {
+  -- Store additional metadata as a JSON string
+  local metadata = json.encode({
     channel_id = current_channel_id,
-    parker = channel.sipuser:get(),
-    timestamp = os.time()
-  }
+    parker = parker,
+    timestamp = timestamp
+  })
+  cache:set('parked_call_meta:' .. park_id, metadata)
+  
+  -- Set expiration for parked call (24 hours)
+  cache:expire(park_key, 86400)
+  cache:expire('parked_call_meta:' .. park_id, 86400)
   
   -- Put the call on hold with music
   app.setvar("PARKED", "true")
@@ -866,7 +871,7 @@ function retrieve_parked_call(context, extension, park_id)
   print("Retrieving parked call with ID " .. park_id)
   
   -- Get the parked channel ID
-  local parked_channel_id = cache:get('parked_call.' .. park_id)
+  local parked_channel_id = cache:get('parked_call:' .. park_id)
   
   if not parked_channel_id then
     print("No parked call found with ID " .. park_id)
@@ -881,9 +886,9 @@ function retrieve_parked_call(context, extension, park_id)
   print("Bridging to parked call " .. parked_channel_id)
   app.bridge("", "", "", parked_channel_id)
   
-  -- Remove from parked calls
-  cache:del('parked_call.' .. park_id)
-  parked_calls[park_id] = nil
+  -- Remove from Redis
+  cache:del('parked_call:' .. park_id)
+  cache:del('parked_call_meta:' .. park_id)
   
   return true
 end
@@ -1142,40 +1147,4 @@ end
 
 setup_peer_contexts();
 
--- Add a dedicated context for feature map handling
-extensions.featuremap_context = {
-  ["_X."] = function (context, extension)
-    print("Feature map context received: " .. extension)
-    return extensions.featuremap(context, extension)
-  end
-};
-
--- Register a feature map for DTMF sequences during active calls
-extensions.features = {
-  ["_*1#"] = handle_disa_sequence,
-  ["_*#"] = bridge_held_call,
-  ["_*0."] = function (context, extension)
-    -- Handle parking and retrieval
-    if extension:match("^%*0%d+#$") then
-      local park_id = extension:match("^%*0(%d+)#$")
-      return park_call(context, extension, park_id)
-    elseif extension:match("^%*0%d+$") then
-      local park_id = extension:match("^%*0(%d+)$")
-      return retrieve_parked_call(context, extension, park_id)
-    end
-  end
-}
-
--- Function to handle DTMF during active calls
-function extensions.featuremap(context, extension)
-  print("Feature map: " .. extension)
-  
-  -- Look for a handler for this feature
-  for pattern, handler in pairs(extensions.features) do
-    if extension:match(pattern:sub(2)) then
-      return handler(context, extension)
-    end
-  end
-  
-  return false
-end
+-- Use standard Asterisk feature handling instead of custom featuremap context
