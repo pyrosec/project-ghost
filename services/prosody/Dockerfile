@@ -14,6 +14,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates \
         ssl-cert \
         build-essential \
+        autoconf \
+        automake \
         pkg-config \
         wget \
         liblua5.2-dev \
@@ -45,9 +47,9 @@ RUN ./configure && make && make install
 RUN chown -R prosody /usr/local/var/lib/prosody
 RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_cloud_notify
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_smacks
-RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push
-RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push_http
-RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_unified_push
+#RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push
+#RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push_http
+#RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_unified_push
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_http_upload
 # Install lua-http for APNS support
 RUN luarocks install --lua-version 5.2 --tree /usr/local http

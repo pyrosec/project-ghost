@@ -14,9 +14,6 @@ VirtualHost "$DOMAIN"
 	
 	modules_enabled = {
 		"cloud_notify"; -- Enable push notifications for this host
-		"push";         -- Core push notification module
-		"push_http";    -- HTTP push notification module
-		"unified_push"; -- UnifiedPush protocol support
 	}
 
 Component "sms.$DOMAIN" "sms"

@@ -90,9 +90,6 @@ modules_enabled = {
 		"mam";
 		              "smacks";
 		"cloud_notify";
-		"push";
-		"push_http";
-		"unified_push";
 }
 
 archive_expires_after = "never";
