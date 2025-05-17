@@ -188,8 +188,8 @@ function dial(target, timeout, options)
   end
   
   -- Set DTMF timeout to allow time to complete sequences
-  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))  -- Convert to seconds
-  app.setvar("TIMEOUT(response)", "10")  -- 10 seconds for a complete response
+  channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)  -- Convert to seconds
+  channel["TIMEOUT(response)"] = "10"  -- 10 seconds for a complete response
   
   -- Call the original dial function
   app.dial(target, timeout, options);
@@ -396,12 +396,12 @@ function dialsip(channel, to, on_failure)
     app.playtones('ring');
     
     -- Set up feature map for DTMF detection during the call
-    app.setvar("DYNAMIC_FEATURES", "all")
-    app.setvar("FEATUREMAP_DIGIT", "*")
-    app.setvar("FEATURE_DIGIT_TIMEOUT", "5000")
+    channel["DYNAMIC_FEATURES"] = "all"
+    channel["FEATUREMAP_DIGIT"] = "*"
+    channel["FEATURE_DIGIT_TIMEOUT"] = "5000"
     
     -- Set the feature context
-    app.setvar("FEATUREMAP_CONTEXT", "featuremap_context")
+    channel["FEATUREMAP_CONTEXT"] = "featuremap_context"
     
     -- Dial with K option to enable DTMF feature detection
     local status = channel.skip:get() ~= 'sip' and dial(ring_group(to), 20, "KTH") or 'CHANUNAVAIL';
@@ -447,7 +447,7 @@ extensions.anonymous_device = {
     app.verbose("Call answered");
     
     -- Enable RTT for this channel
-    app.set("RTT_ENABLED=true");
+    channel["RTT_ENABLED"] = "true";
     app.verbose("RTT enabled for channel");
     
     -- Set up external media first
@@ -473,7 +473,7 @@ extensions.default = {
     app.verbose("Call answered");
     
     -- Enable RTT for this channel
-    app.set("RTT_ENABLED=true");
+    channel["RTT_ENABLED"] = "true";
     app.verbose("RTT enabled for channel");
     
     -- Set up external media first
@@ -784,22 +784,22 @@ function handle_disa_sequence(context, extension)
   print("Handling DISA sequence")
   
   -- Set DTMF timeout for better sequence handling
-  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-  app.setvar("TIMEOUT(response)", "20")
+  channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+  channel["TIMEOUT(response)"] = "20"
   
   -- Store the current channel ID
   local current_channel_id = channel.UNIQUEID:get()
   
   -- Put the current call on hold
-  app.setvar("HOLD_CHANNEL", current_channel_id)
-  app.setvar("HOLD_STATE", "true")
+  channel["HOLD_CHANNEL"] = current_channel_id
+  channel["HOLD_STATE"] = "true"
   app.musiconhold()
   
   -- Store the held channel in Redis for later retrieval
   cache:set('held_call.' .. channel.sipuser:get(), current_channel_id)
   
   -- Set a flag that we're in DISA mode
-  app.setvar("in_disa", "true")
+  channel["in_disa"] = "true"
   
   -- Enter DISA with the authenticated user's context
   print("Entering DISA for user " .. channel.sipuser:get())
@@ -846,8 +846,8 @@ function park_call(context, extension, park_id)
   print("Parking call with ID " .. park_id)
   
   -- Set DTMF timeout for better sequence handling
-  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-  app.setvar("TIMEOUT(response)", "20")
+  channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+  channel["TIMEOUT(response)"] = "20"
   
   -- Store the current channel ID with the park ID
   local current_channel_id = channel.UNIQUEID:get()
@@ -871,8 +871,8 @@ function park_call(context, extension, park_id)
   cache:expire('parked_call_meta:' .. park_id, 86400)
   
   -- Put the call on hold with music
-  app.setvar("PARKED", "true")
-  app.setvar("PARK_ID", park_id)
+  channel["PARKED"] = "true"
+  channel["PARK_ID"] = park_id
   app.musiconhold()
   
   -- Disconnect the SIP device from the call
@@ -887,8 +887,8 @@ function retrieve_parked_call(context, extension, park_id)
   print("Retrieving parked call with ID " .. park_id)
   
   -- Set DTMF timeout for better sequence handling
-  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-  app.setvar("TIMEOUT(response)", "20")
+  channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+  channel["TIMEOUT(response)"] = "20"
   
   -- Get the parked channel ID
   local parked_channel_id = cache:get('parked_call:' .. park_id)
@@ -989,7 +989,7 @@ extensions.authenticated_internal = {
       app.verbose("Call answered");
     
       -- Enable RTT for this channel
-      app.set("RTT_ENABLED=true");
+      channel["RTT_ENABLED"] = "true";
       app.verbose("RTT enabled for channel");
     
       -- Set up external media first
@@ -1021,8 +1021,8 @@ extensions.authenticated_internal = {
     end,
     ["00"] = function (context, extension)
       -- Set DTMF timeout before waiting for extension
-      app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-      app.setvar("TIMEOUT(response)", "20")
+      channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+      channel["TIMEOUT(response)"] = "20"
       return app.waitexten(20);
     end
   }; 
@@ -1048,8 +1048,8 @@ extensions.inbound = {
       if not cache:get('ghostem.' .. extension) then app.playtones('ring'); end
       channel.inbound = extension;
       -- Set DTMF timeout before waiting for extension
-      app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-      app.setvar("TIMEOUT(response)", "10")
+      channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+      channel["TIMEOUT(response)"] = "10"
       return app.waitexten(10);  -- Increased from 6 to 10 seconds to give more time
     end
     return inbound_handler(context, channel.extension:get());
@@ -1117,8 +1117,8 @@ extensions.global_disa = {
   [global_disa_did] = function (context, extension)
     app.answer();
     -- Set DTMF timeout for DISA
-    app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
-    app.setvar("TIMEOUT(response)", "20")
+    channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+    channel["TIMEOUT(response)"] = "20"
     app.disa('no-password', 'global_disa_handler');
   end
 };
