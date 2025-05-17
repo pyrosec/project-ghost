@@ -275,12 +275,7 @@ const handleSms = async (sms) => {
             logger_1.logger.info(`REWRITE IN (${sms.from} => ${sms.to} as ${rewriteUsername})`);
             // Store in database with original values
             await insertToDatabase(sms);
-            // Push to Redis with the username as recipient
-            const domain = process.env.XMPP_DOMAIN || 'pyrosec.is';
-            await redis.rpush(SMS_IN_CHANNEL, JSON.stringify({
-                ...sms,
-                recipient: `${rewriteUsername}@${domain}`
-            }));
+            await redis.rpush(SMS_IN_CHANNEL, JSON.stringify(Object.assign({}, sms, { to: rewriteUsername })));
             // Don't forward this SMS if sms-fallback is set
             return;
         }
