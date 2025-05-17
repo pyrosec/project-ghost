@@ -7,6 +7,8 @@ local ltn12 = require 'ltn12';
 local redis = require 'redis';
 
 -- Use Redis for call parking and bridging state management instead of in-memory tables
+-- Add configuration for DTMF timeouts to allow collecting complete sequences
+local DTMF_TIMEOUT = 3000  -- 3 seconds to complete a DTMF sequence
 
 
 local lua_print = print;
@@ -184,6 +186,10 @@ function dial(target, timeout, options)
   elseif not options:find("K") then
     options = options .. "K"  -- Add K option for DTMF feature detection
   end
+  
+  -- Set DTMF timeout to allow time to complete sequences
+  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))  -- Convert to seconds
+  app.setvar("TIMEOUT(response)", "10")  -- 10 seconds for a complete response
   
   -- Call the original dial function
   app.dial(target, timeout, options);
@@ -757,23 +763,29 @@ function handle_dtmf_sequence(context, extension, dtmf_sequence)
   elseif dtmf_sequence == "*#" and channel.in_disa:get() == "true" then
     return bridge_held_call(context, extension)
   
-  -- *0xxx# - Park the call with identifier xxx
+  -- *0xxx# - Park the call with identifier xxx (requires at least one digit)
   elseif dtmf_sequence:match("^%*0%d+#$") then
     local park_id = dtmf_sequence:match("^%*0(%d+)#$")
     return park_call(context, extension, park_id)
   
-  -- *0xxx - Retrieve parked call with identifier xxx
-  elseif dtmf_sequence:match("^%*0%d+$") then
+  -- *0xxx - Retrieve parked call with identifier xxx (requires at least two digits)
+  elseif dtmf_sequence:match("^%*0%d%d+$") then
     local park_id = dtmf_sequence:match("^%*0(%d+)$")
     return retrieve_parked_call(context, extension, park_id)
   end
   
+  -- If we get here, it's a partial match or unknown sequence
+  -- Return false to allow more digits to be collected
   return false
 end
 
 -- Function to handle DISA sequence (*1#)
 function handle_disa_sequence(context, extension)
   print("Handling DISA sequence")
+  
+  -- Set DTMF timeout for better sequence handling
+  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+  app.setvar("TIMEOUT(response)", "20")
   
   -- Store the current channel ID
   local current_channel_id = channel.UNIQUEID:get()
@@ -833,6 +845,10 @@ end
 function park_call(context, extension, park_id)
   print("Parking call with ID " .. park_id)
   
+  -- Set DTMF timeout for better sequence handling
+  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+  app.setvar("TIMEOUT(response)", "20")
+  
   -- Store the current channel ID with the park ID
   local current_channel_id = channel.UNIQUEID:get()
   local parker = channel.sipuser:get()
@@ -869,6 +885,10 @@ end
 -- Function to retrieve a parked call
 function retrieve_parked_call(context, extension, park_id)
   print("Retrieving parked call with ID " .. park_id)
+  
+  -- Set DTMF timeout for better sequence handling
+  app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+  app.setvar("TIMEOUT(response)", "20")
   
   -- Get the parked channel ID
   local parked_channel_id = cache:get('parked_call:' .. park_id)
@@ -910,29 +930,32 @@ extensions.authenticated_internal = {
       end
     end,
     ["_*9."] = fallback_register_handler,
-    -- Modified to check for DTMF sequence first
-    ["_*1."] = function (context, extension)
-      -- Check if this is a DTMF sequence during an active call
-      if extension == "*1#" then
-        return handle_disa_sequence(context, extension)
-      end
-      
-      -- Original behavior for other *1 extensions
+    -- Modified to use more specific patterns that won't match partial sequences
+    ["*1#"] = function (context, extension)
+      -- DTMF sequence for DISA
+      return handle_disa_sequence(context, extension)
+    end,
+    ["_*1X."] = function (context, extension)
+      -- Original behavior for other *1 extensions (requires at least one digit after *1)
       local ring_group = cache:get('custom-ring-group.' .. get_callerid() .. '.' .. extension:sub(3)) or cache:get('custom-ring-group.' .. extension:sub(3));
       return app.dial(ring_group, 30);
     end,
-    -- Add handlers for the new DTMF sequences
+    -- Add handlers for the new DTMF sequences with exact patterns
     ["*#"] = function (context, extension)
       if channel.in_disa:get() == "true" then
         return bridge_held_call(context, extension)
       end
     end,
-    ["_*0."] = function (context, extension)
-      -- Check if this is a parking sequence (*0xxx#) or retrieval (*0xxx)
+    ["_*0X.#"] = function (context, extension)
+      -- Parking sequence (*0xxx#) - requires at least one digit and ending with #
       if extension:match("^%*0%d+#$") then
         local park_id = extension:match("^%*0(%d+)#$")
         return park_call(context, extension, park_id)
-      elseif extension:match("^%*0%d+$") then
+      end
+    end,
+    ["_*0XX"] = function (context, extension)
+      -- Retrieval sequence (*0xxx) - requires at least two digits after *0
+      if extension:match("^%*0%d%d+$") then
         local park_id = extension:match("^%*0(%d+)$")
         return retrieve_parked_call(context, extension, park_id)
       end
@@ -997,6 +1020,9 @@ extensions.authenticated_internal = {
       return app.stasis("externalMedia");
     end,
     ["00"] = function (context, extension)
+      -- Set DTMF timeout before waiting for extension
+      app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+      app.setvar("TIMEOUT(response)", "20")
       return app.waitexten(20);
     end
   }; 
@@ -1021,7 +1047,10 @@ extensions.inbound = {
       app.answer();
       if not cache:get('ghostem.' .. extension) then app.playtones('ring'); end
       channel.inbound = extension;
-      return app.waitexten(6);
+      -- Set DTMF timeout before waiting for extension
+      app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+      app.setvar("TIMEOUT(response)", "10")
+      return app.waitexten(10);  -- Increased from 6 to 10 seconds to give more time
     end
     return inbound_handler(context, channel.extension:get());
   end
@@ -1087,6 +1116,9 @@ voicemail_users = read_voicemail_users();
 extensions.global_disa = {
   [global_disa_did] = function (context, extension)
     app.answer();
+    -- Set DTMF timeout for DISA
+    app.setvar("TIMEOUT(digit)", tostring(DTMF_TIMEOUT / 1000))
+    app.setvar("TIMEOUT(response)", "20")
     app.disa('no-password', 'global_disa_handler');
   end
 };
