@@ -6,6 +6,10 @@ local json = require 'rapidjson';
 local ltn12 = require 'ltn12';
 local redis = require 'redis';
 
+-- Global variables for call parking
+local parked_calls = {}
+local bridged_calls = {}
+
 
 local lua_print = print;
 function print (msg)
@@ -131,7 +135,7 @@ function pstn_fallback_dial(channel)
   print('dialing');
   local match = number:find('#%*(.*)')
   app.stopplaytones();
-  local status = dial('SIP/' .. outbound .. '/' .. get_number_from_dial(number), 40, 'U(detect_voicemail,s,1)g' .. get_dial_argument(number));
+  local status = dial('SIP/' .. outbound .. '/' .. get_number_from_dial(number), 40, 'U(detect_voicemail,s,1)gK' .. get_dial_argument(number));
   print(status);
   set_callerid(channel, callerid_num);
   channel['CALLERID(name)'] = callerid_name;
@@ -175,8 +179,22 @@ function is_blacklisted(channel, from)
   return (cache:get('blacklist.' .. from) or cache:get('blacklist.' .. channel.extension:get() .. '.' .. from) or cache:get('blacklist.' .. channel.did:get() .. '.' .. channel.callerid_num:get() .. '.' .. from));
 end
 
-function dial(...)
-  app.dial(...);
+function dial(target, timeout, options)
+  -- Add feature detection to options if not already present
+  if not options then
+    options = "KTH"  -- K=Allow DTMF features, T=Transfer, H=Hangup
+  elseif not options:find("K") then
+    options = options .. "K"  -- Add K option for DTMF feature detection
+  end
+  
+  -- Set the feature context to our custom featuremap
+  app.setvar("DYNAMIC_FEATURES", "all")
+  app.setvar("FEATUREMAP_DIGIT", "*")
+  app.setvar("FEATURE_DIGIT_TIMEOUT", "5000")
+  app.setvar("FEATUREMAP_CONTEXT", "featuremap_context")
+  
+  -- Call the original dial function
+  app.dial(target, timeout, options);
   return channel.DIALSTATUS:get();
 end
 
@@ -334,7 +352,7 @@ function dial_outbound(channel, number)
   if extensions.inbound[number] then return extensions.inbound[number](context, number); end
   local response = {};
   set_last_cid(channel, number, channel['CALLERID(num)']:get());
-  return dial('SIP/' .. outbound .. '/' .. number);
+  return dial('SIP/' .. outbound .. '/' .. number, 40, 'KTH');
  -- end
  -- return dial('SIP/' .. channel['CALLERID(num)']:get() .. ':ghostdial@' .. host.result .. ':35061/' .. number);
 end
@@ -378,9 +396,19 @@ function dialsip(channel, to, on_failure)
     app.answer();
     set_last_cid(channel, channel.callerid_num:get(), channel.did:get());
     app.playtones('ring');
-    local status = channel.skip:get() ~= 'sip' and dial(ring_group(to), 20) or 'CHANUNAVAIL';
+    
+    -- Set up feature map for DTMF detection during the call
+    app.setvar("DYNAMIC_FEATURES", "all")
+    app.setvar("FEATUREMAP_DIGIT", "*")
+    app.setvar("FEATURE_DIGIT_TIMEOUT", "5000")
+    
+    -- Set the feature context
+    app.setvar("FEATUREMAP_CONTEXT", "featuremap_context")
+    
+    -- Dial with K option to enable DTMF feature detection
+    local status = channel.skip:get() ~= 'sip' and dial(ring_group(to), 20, "KTH") or 'CHANUNAVAIL';
     app.playtones('ring');
-    if status == "CHANUNAVAIL" or status == "NOANSWER" and channel.skip:get() ~= "pstn" then 
+    if status == "CHANUNAVAIL" or status == "NOANSWER" and channel.skip:get() ~= "pstn" then
 	    status = pstn_fallback_dial(channel);
     end
     if status == "CHANUNAVAIL" or status == "BUSY" or status == "CONGESTED" or status == "NOANSWER" then
@@ -501,13 +529,13 @@ function sip_handler(context, extension)
     local found, uri = sip_account_to_uri(extension);
     if found then
       print('DIALING EXTERNAL URI ' .. uri);
-      return app.dial('SIP/' .. uri);
+      return dial('SIP/' .. uri, 40, 'KTH');
     end
     if #extension == 7 then
       local extghost = extension:sub(0, 4);
       local extext = extension:sub(5, 7);
       print("DIALING EXTERNAL SYSTEM LABELED " .. extghost);
-      return app.dial("SIP/" .. extghost .. "/" .. channel.sipuser:get() .. extext);
+      return dial("SIP/" .. extghost .. "/" .. channel.sipuser:get() .. extext, 40, 'KTH');
     end
     local custom = get_custom_extension(ext, channel.extension_with_modifiers:get());
     if custom then
@@ -725,6 +753,141 @@ function fallback_register_handler(context, extension)
       return app.hangup();
     end
 
+-- Function to handle DTMF sequences during active calls
+function handle_dtmf_sequence(context, extension, dtmf_sequence)
+  print("Handling DTMF sequence: " .. dtmf_sequence)
+  
+  -- *1# - Put call on hold and enter DISA
+  if dtmf_sequence == "*1#" then
+    return handle_disa_sequence(context, extension)
+  
+  -- *# - Bridge the DISA call with the original held call
+  elseif dtmf_sequence == "*#" and channel.in_disa:get() == "true" then
+    return bridge_held_call(context, extension)
+  
+  -- *0xxx# - Park the call with identifier xxx
+  elseif dtmf_sequence:match("^%*0%d+#$") then
+    local park_id = dtmf_sequence:match("^%*0(%d+)#$")
+    return park_call(context, extension, park_id)
+  
+  -- *0xxx - Retrieve parked call with identifier xxx
+  elseif dtmf_sequence:match("^%*0%d+$") then
+    local park_id = dtmf_sequence:match("^%*0(%d+)$")
+    return retrieve_parked_call(context, extension, park_id)
+  end
+  
+  return false
+end
+
+-- Function to handle DISA sequence (*1#)
+function handle_disa_sequence(context, extension)
+  print("Handling DISA sequence")
+  
+  -- Store the current channel ID
+  local current_channel_id = channel.UNIQUEID:get()
+  
+  -- Put the current call on hold
+  app.setvar("HOLD_CHANNEL", current_channel_id)
+  app.setvar("HOLD_STATE", "true")
+  app.musiconhold()
+  
+  -- Store the held channel in Redis for later retrieval
+  cache:set('held_call.' .. channel.sipuser:get(), current_channel_id)
+  
+  -- Set a flag that we're in DISA mode
+  app.setvar("in_disa", "true")
+  
+  -- Enter DISA with the authenticated user's context
+  print("Entering DISA for user " .. channel.sipuser:get())
+  return app.disa('no-password', channel.sipuser:get() .. '-context')
+end
+
+-- Function to bridge the DISA call with the original held call
+function bridge_held_call(context, extension)
+  print("Bridging held call")
+  
+  -- Get the held channel ID
+  local held_channel_id = cache:get('held_call.' .. channel.sipuser:get())
+  
+  if not held_channel_id then
+    print("No held call found for " .. channel.sipuser:get())
+    app.playback('invalid')
+    return false
+  end
+  
+  -- Current channel ID
+  local current_channel_id = channel.UNIQUEID:get()
+  
+  -- Bridge the channels
+  print("Bridging channels " .. current_channel_id .. " and " .. held_channel_id)
+  
+  -- Store the bridge information
+  bridged_calls[current_channel_id] = held_channel_id
+  bridged_calls[held_channel_id] = current_channel_id
+  
+  -- Create a bridge and add both channels
+  local bridge_id = "bridge_" .. current_channel_id .. "_" .. held_channel_id
+  app.bridge("", "", "", held_channel_id)
+  
+  return true
+end
+
+-- Function to park a call with an identifier
+function park_call(context, extension, park_id)
+  print("Parking call with ID " .. park_id)
+  
+  -- Store the current channel ID with the park ID
+  local current_channel_id = channel.UNIQUEID:get()
+  
+  -- Store in Redis
+  cache:set('parked_call.' .. park_id, current_channel_id)
+  
+  -- Add to local tracking
+  parked_calls[park_id] = {
+    channel_id = current_channel_id,
+    parker = channel.sipuser:get(),
+    timestamp = os.time()
+  }
+  
+  -- Put the call on hold with music
+  app.setvar("PARKED", "true")
+  app.setvar("PARK_ID", park_id)
+  app.musiconhold()
+  
+  -- Disconnect the SIP device from the call
+  print("Disconnecting SIP device from parked call")
+  app.playback('call-parked')
+  
+  return app.hangup()
+end
+
+-- Function to retrieve a parked call
+function retrieve_parked_call(context, extension, park_id)
+  print("Retrieving parked call with ID " .. park_id)
+  
+  -- Get the parked channel ID
+  local parked_channel_id = cache:get('parked_call.' .. park_id)
+  
+  if not parked_channel_id then
+    print("No parked call found with ID " .. park_id)
+    app.playback('invalid')
+    return false
+  end
+  
+  -- Current channel ID
+  local current_channel_id = channel.UNIQUEID:get()
+  
+  -- Bridge to the parked call
+  print("Bridging to parked call " .. parked_channel_id)
+  app.bridge("", "", "", parked_channel_id)
+  
+  -- Remove from parked calls
+  cache:del('parked_call.' .. park_id)
+  parked_calls[park_id] = nil
+  
+  return true
+end
+
 extensions.authenticated_internal = {
     ["_X."] = sip_handler,
     ["_*76*."] = function (context, extension)
@@ -742,9 +905,32 @@ extensions.authenticated_internal = {
       end
     end,
     ["_*9."] = fallback_register_handler,
+    -- Modified to check for DTMF sequence first
     ["_*1."] = function (context, extension)
+      -- Check if this is a DTMF sequence during an active call
+      if extension == "*1#" then
+        return handle_disa_sequence(context, extension)
+      end
+      
+      -- Original behavior for other *1 extensions
       local ring_group = cache:get('custom-ring-group.' .. get_callerid() .. '.' .. extension:sub(3)) or cache:get('custom-ring-group.' .. extension:sub(3));
       return app.dial(ring_group, 30);
+    end,
+    -- Add handlers for the new DTMF sequences
+    ["*#"] = function (context, extension)
+      if channel.in_disa:get() == "true" then
+        return bridge_held_call(context, extension)
+      end
+    end,
+    ["_*0."] = function (context, extension)
+      -- Check if this is a parking sequence (*0xxx#) or retrieval (*0xxx)
+      if extension:match("^%*0%d+#$") then
+        local park_id = extension:match("^%*0(%d+)#$")
+        return park_call(context, extension, park_id)
+      elseif extension:match("^%*0%d+$") then
+        local park_id = extension:match("^%*0(%d+)$")
+        return retrieve_parked_call(context, extension, park_id)
+      end
     end,
     ["*8"] = function (context, extension)
       app.answer();
@@ -955,3 +1141,41 @@ function setup_peer_contexts ()
 end
 
 setup_peer_contexts();
+
+-- Add a dedicated context for feature map handling
+extensions.featuremap_context = {
+  ["_X."] = function (context, extension)
+    print("Feature map context received: " .. extension)
+    return extensions.featuremap(context, extension)
+  end
+};
+
+-- Register a feature map for DTMF sequences during active calls
+extensions.features = {
+  ["_*1#"] = handle_disa_sequence,
+  ["_*#"] = bridge_held_call,
+  ["_*0."] = function (context, extension)
+    -- Handle parking and retrieval
+    if extension:match("^%*0%d+#$") then
+      local park_id = extension:match("^%*0(%d+)#$")
+      return park_call(context, extension, park_id)
+    elseif extension:match("^%*0%d+$") then
+      local park_id = extension:match("^%*0(%d+)$")
+      return retrieve_parked_call(context, extension, park_id)
+    end
+  end
+}
+
+-- Function to handle DTMF during active calls
+function extensions.featuremap(context, extension)
+  print("Feature map: " .. extension)
+  
+  -- Look for a handler for this feature
+  for pattern, handler in pairs(extensions.features) do
+    if extension:match(pattern:sub(2)) then
+      return handler(context, extension)
+    end
+  end
+  
+  return false
+end
