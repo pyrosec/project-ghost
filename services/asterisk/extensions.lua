@@ -191,7 +191,14 @@ function dial(target, timeout, options)
   channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)  -- Convert to seconds
   channel["TIMEOUT(response)"] = "10"  -- 10 seconds for a complete response
   
+  -- Enable DTMF detection for this channel
+  channel["dtmf_features"] = "H"
+  
+  -- Ensure the feature context is set
+  channel["FEATUREMAP_CONTEXT"] = "featuremap_context"
+  
   -- Call the original dial function
+  app.verbose("Dialing " .. target .. " with options " .. options)
   app.dial(target, timeout, options);
   return channel.DIALSTATUS:get();
 end
@@ -398,7 +405,10 @@ function dialsip(channel, to, on_failure)
     -- Set up feature map for DTMF detection during the call
     channel["DYNAMIC_FEATURES"] = "all"
     channel["FEATUREMAP_DIGIT"] = "*"
-    channel["FEATURE_DIGIT_TIMEOUT"] = "5000"
+    channel["FEATURE_DIGIT_TIMEOUT"] = tostring(DTMF_TIMEOUT)
+    
+    -- Enable DTMF detection for this channel
+    channel["dtmf_features"] = "H"
     
     -- Set the feature context
     channel["FEATUREMAP_CONTEXT"] = "featuremap_context"
@@ -755,27 +765,41 @@ function fallback_register_handler(context, extension)
 function handle_dtmf_sequence(context, extension, dtmf_sequence)
   print("Handling DTMF sequence: " .. dtmf_sequence)
   
+  -- Set timeout for digit collection
+  channel["TIMEOUT(digit)"] = tostring(DTMF_TIMEOUT / 1000)
+  channel["TIMEOUT(response)"] = "10"
+  
   -- *1# - Put call on hold and enter DISA
   if dtmf_sequence == "*1#" then
+    app.verbose("DTMF: Entering DISA mode")
     return handle_disa_sequence(context, extension)
   
   -- *# - Bridge the DISA call with the original held call
   elseif dtmf_sequence == "*#" and channel.in_disa:get() == "true" then
+    app.verbose("DTMF: Bridging held call")
     return bridge_held_call(context, extension)
   
   -- *0xxx# - Park the call with identifier xxx (requires at least one digit)
   elseif dtmf_sequence:match("^%*0%d+#$") then
     local park_id = dtmf_sequence:match("^%*0(%d+)#$")
+    app.verbose("DTMF: Parking call with ID " .. park_id)
     return park_call(context, extension, park_id)
   
   -- *0xxx - Retrieve parked call with identifier xxx (requires at least two digits)
   elseif dtmf_sequence:match("^%*0%d%d+$") then
     local park_id = dtmf_sequence:match("^%*0(%d+)$")
+    app.verbose("DTMF: Retrieving parked call with ID " .. park_id)
     return retrieve_parked_call(context, extension, park_id)
   end
   
-  -- If we get here, it's a partial match or unknown sequence
-  -- Return false to allow more digits to be collected
+  -- For partial sequences, wait for more digits
+  if dtmf_sequence:match("^%*0%d*$") or dtmf_sequence == "*1" then
+    app.verbose("DTMF: Partial sequence detected, waiting for more digits")
+    return app.waitexten(10)
+  end
+  
+  -- If we get here, it's an unknown sequence
+  app.verbose("DTMF: Unknown sequence: " .. dtmf_sequence)
   return false
 end
 
@@ -1179,4 +1203,21 @@ end
 
 setup_peer_contexts();
 
+-- Define the featuremap_context for handling DTMF during active calls
+extensions.featuremap_context = {
+  ["_*."] = function (context, extension)
+    app.verbose("Feature map context received: " .. extension)
+    return handle_dtmf_sequence(context, extension, extension)
+  end,
+  ["_X."] = function (context, extension)
+    app.verbose("Feature map context received digit: " .. extension)
+    return false
+  end
+}
+
+-- Define the actual featuremap function that Asterisk calls
+function extensions.featuremap(context, extension)
+  app.verbose("Feature map called with: " .. extension)
+  return handle_dtmf_sequence(context, extension, extension)
+end
 -- Use standard Asterisk feature handling instead of custom featuremap context
