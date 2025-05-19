@@ -90,6 +90,7 @@ modules_enabled = {
 		"mam";
 		              "smacks";
 		"cloud_notify";
+		"cloud_notify_extensions";
 }
 
 archive_expires_after = "never";
@@ -201,6 +202,9 @@ certificates = "/etc/letsencrypt/live/$DOMAIN"
 
 -- HTTPS currently only supports a single certificate, specify it here:
 https_certificate = "$TLS_CERTIFICATE"
+
+-- Include push notification configuration
+Include "push_notification.cfg.lua"
 
 ----------- Virtual hosts -----------
 -- You need to add a VirtualHost entry for each domain you wish Prosody to serve.

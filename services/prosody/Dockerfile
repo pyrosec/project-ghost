@@ -30,6 +30,7 @@ RUN luarocks install --lua-version 5.2 --tree /usr/local redis-lua
 RUN luarocks install --lua-version 5.2 --tree /usr/local luaunbound
 RUN luarocks install --lua-version 5.2 --tree /usr/local luafilesystem
 RUN luarocks install --lua-version 5.2 --tree /usr/local luasec
+RUN luarocks install --lua-version 5.2 --tree /usr/local luaossl
 WORKDIR /usr/src
 RUN wget https://github.com/libexpat/libexpat/releases/download/R_2_6_2/expat-2.6.2.tar.gz
 RUN tar xfvz expat-2.6.2.tar.gz
@@ -46,7 +47,8 @@ WORKDIR /usr/src/prosody
 RUN ./configure && make && make install
 RUN chown -R prosody /usr/local/var/lib/prosody
 RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_cloud_notify
-#RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_smacks
+RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_cloud_notify_extensions
+# mod_smacks is included in Prosody 0.12, no need to install separately
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_push_http
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_unified_push
