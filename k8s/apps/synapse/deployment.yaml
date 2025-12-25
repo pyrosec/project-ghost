@@ -30,7 +30,7 @@ spec:
               done
       containers:
         - name: synapse
-          image: ghostdial/synapse:latest
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/synapse:latest
           ports:
             - containerPort: 8008
               name: http

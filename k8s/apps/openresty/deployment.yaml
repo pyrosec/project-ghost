@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: openresty
-          image: openresty/openresty:alpine
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openresty:latest
           ports:
             - containerPort: 80
               name: http

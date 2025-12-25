@@ -28,7 +28,7 @@ spec:
               done
       containers:
         - name: rtt-bridge
-          image: ghostdial/rtt-bridge:latest
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/rtt-bridge:latest
           ports:
             - containerPort: 8080
               name: http

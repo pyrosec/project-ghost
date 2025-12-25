@@ -30,7 +30,7 @@ spec:
               done
       containers:
         - name: dossi
-          image: ghostdial/dossi:latest
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/dossi:latest
           envFrom:
             - configMapRef:
                 name: ghost-config

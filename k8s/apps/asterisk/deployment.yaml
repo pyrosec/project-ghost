@@ -30,7 +30,7 @@ spec:
               done
       containers:
         - name: asterisk
-          image: ghostdial/asterisk:latest
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/asterisk:latest
           ports:
             - containerPort: 35061
               name: sip-tls
