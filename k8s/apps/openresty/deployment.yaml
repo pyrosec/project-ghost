@@ -37,8 +37,6 @@ spec:
           ports:
             - containerPort: 80
               name: http
-            - containerPort: 443
-              name: https
           envFrom:
             - configMapRef:
                 name: ghost-config
@@ -52,9 +50,6 @@ spec:
           volumeMounts:
             - name: nginx-config
               mountPath: /etc/nginx
-            - name: certificates
-              mountPath: /etc/letsencrypt
-              readOnly: true
             - name: www-data
               mountPath: /var/www
             - name: certbot-www
@@ -77,9 +72,6 @@ spec:
             name: openresty-config
         - name: nginx-config
           emptyDir: {}
-        - name: certificates
-          persistentVolumeClaim:
-            claimName: certificates
         - name: www-data
           emptyDir: {}
         - name: certbot-www
@@ -99,9 +91,6 @@ spec:
     - port: 80
       targetPort: 80
       name: http
-    - port: 443
-      targetPort: 443
-      name: https
   type: ClusterIP
 ---
 # Global Load Balancer via Ingress
@@ -119,7 +108,7 @@ spec:
     service:
       name: openresty
       port:
-        number: 443
+        number: 80
   rules:
     - host: pyrosec.is
       http:
@@ -130,7 +119,7 @@ spec:
               service:
                 name: openresty
                 port:
-                  number: 443
+                  number: 80
     - host: matrix.pyrosec.is
       http:
         paths:
@@ -140,7 +129,7 @@ spec:
               service:
                 name: openresty
                 port:
-                  number: 443
+                  number: 80
     - host: vault.pyrosec.is
       http:
         paths:
@@ -150,7 +139,7 @@ spec:
               service:
                 name: openresty
                 port:
-                  number: 443
+                  number: 80
 ---
 # GKE Managed Certificate (alternative to cert-manager)
 apiVersion: networking.gke.io/v1
