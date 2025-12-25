@@ -15,14 +15,33 @@ spec:
       labels:
         app: openresty
     spec:
+      initContainers:
+        - name: copy-config
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              cp /config-source/nginx.conf /etc/nginx/nginx.conf
+              echo "Config copied successfully"
+          volumeMounts:
+            - name: openresty-config
+              mountPath: /config-source
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx
       containers:
         - name: openresty
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openresty:latest
+          command: ["nginx", "-g", "daemon off;"]
           ports:
             - containerPort: 80
               name: http
             - containerPort: 443
               name: https
+          envFrom:
+            - configMapRef:
+                name: ghost-config
           resources:
             requests:
               cpu: 100m
@@ -31,9 +50,8 @@ spec:
               cpu: 1000m
               memory: 512Mi
           volumeMounts:
-            - name: openresty-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
+            - name: nginx-config
+              mountPath: /etc/nginx
             - name: certificates
               mountPath: /etc/letsencrypt
               readOnly: true
@@ -57,6 +75,8 @@ spec:
         - name: openresty-config
           configMap:
             name: openresty-config
+        - name: nginx-config
+          emptyDir: {}
         - name: certificates
           persistentVolumeClaim:
             claimName: certificates

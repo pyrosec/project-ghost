@@ -71,6 +71,12 @@ data:
             listen 80;
             server_name _;
 
+            location /health {
+                access_log off;
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+
             location /.well-known/acme-challenge/ {
                 root /var/www/certbot;
             }
