@@ -17,19 +17,20 @@ spec:
     spec:
       initContainers:
         - name: copy-config
-          image: busybox:1.36
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openresty:latest
           command:
             - sh
             - -c
             - |
-              cp /config-source/nginx.conf /etc/nginx/nginx.conf
+              cp /config-source/nginx.conf /etc/nginx-dest/nginx.conf
+              cp /etc/nginx/mime.types /etc/nginx-dest/mime.types 2>/dev/null || true
               echo "Config copied successfully"
           volumeMounts:
             - name: openresty-config
               mountPath: /config-source
               readOnly: true
             - name: nginx-config
-              mountPath: /etc/nginx
+              mountPath: /etc/nginx-dest
       containers:
         - name: openresty
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openresty:latest
