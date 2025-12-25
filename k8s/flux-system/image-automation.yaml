@@ -1,0 +1,133 @@
+# Image Automation for automatic container image updates
+---
+# Image Repository for ghostdial images
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-asterisk
+  namespace: flux-system
+spec:
+  image: ghostdial/asterisk
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-synapse
+  namespace: flux-system
+spec:
+  image: ghostdial/synapse
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-prosody
+  namespace: flux-system
+spec:
+  image: ghostdial/prosody
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-dossi
+  namespace: flux-system
+spec:
+  image: ghostdial/dossi
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-sms-pipeline
+  namespace: flux-system
+spec:
+  image: ghostdial/sms_pipeline
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-voicemail-pipeline
+  namespace: flux-system
+spec:
+  image: ghostdial/voicemail_pipeline
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ghostdial-rtt-bridge
+  namespace: flux-system
+spec:
+  image: ghostdial/rtt-bridge
+  interval: 5m
+---
+# Image Policies - always use latest
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: ghostdial-asterisk
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: ghostdial-asterisk
+  policy:
+    semver:
+      range: ">=0.0.0"
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: ghostdial-synapse
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: ghostdial-synapse
+  policy:
+    semver:
+      range: ">=0.0.0"
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: ghostdial-prosody
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: ghostdial-prosody
+  policy:
+    semver:
+      range: ">=0.0.0"
+---
+# Image Update Automation
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: ghost-image-update
+  namespace: flux-system
+spec:
+  interval: 30m
+  sourceRef:
+    kind: GitRepository
+    name: project-ghost
+  git:
+    checkout:
+      ref:
+        branch: master
+    commit:
+      author:
+        email: flux@pyrosec.is
+        name: Flux Automation
+      messageTemplate: |
+        Automated image update
+
+        {{range .Changed.Changes}}
+        - {{.OldValue}} -> {{.NewValue}}
+        {{end}}
+    push:
+      branch: master
+  update:
+    path: ./k8s/apps
+    strategy: Setters

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dossi
+  namespace: ghost
+  labels:
+    app: dossi
+    redis-client: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dossi
+  template:
+    metadata:
+      labels:
+        app: dossi
+        redis-client: "true"
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis 6379; do
+                echo "Waiting for redis..."
+                sleep 2
+              done
+      containers:
+        - name: dossi
+          image: ghostdial/dossi:latest
+          envFrom:
+            - configMapRef:
+                name: ghost-config
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: REDIS_URI
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: asterisk-data
+              mountPath: /etc/asterisk
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - pgrep
+                - node
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: asterisk-data
+          persistentVolumeClaim:
+            claimName: asterisk-data

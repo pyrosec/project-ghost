@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ghost
+
+resources:
+  # Infrastructure services (deploy first)
+  - redis
+  - postgres
+
+  # Core services
+  - synapse
+  - vaultwarden
+  - prosody
+  - asterisk
+
+  # Pipeline services
+  - dossi
+  - sms-pipeline
+  - voicemail-pipeline
+  - rtt-bridge
+
+  # Ingress and networking
+  - openresty
+  - coturn
+
+commonLabels:
+  app.kubernetes.io/part-of: project-ghost
+  app.kubernetes.io/managed-by: flux

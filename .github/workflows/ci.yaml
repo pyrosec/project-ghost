@@ -1,0 +1,285 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'services/**'
+      - 'k8s/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'services/**'
+      - 'k8s/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghostdial
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      asterisk: ${{ steps.changes.outputs.asterisk }}
+      synapse: ${{ steps.changes.outputs.synapse }}
+      prosody: ${{ steps.changes.outputs.prosody }}
+      dossi: ${{ steps.changes.outputs.dossi }}
+      sms_pipeline: ${{ steps.changes.outputs.sms_pipeline }}
+      voicemail_pipeline: ${{ steps.changes.outputs.voicemail_pipeline }}
+      rtt_bridge: ${{ steps.changes.outputs.rtt_bridge }}
+      nginx: ${{ steps.changes.outputs.nginx }}
+      kubernetes: ${{ steps.changes.outputs.kubernetes }}
+      terraform: ${{ steps.changes.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            asterisk:
+              - 'services/asterisk/**'
+            synapse:
+              - 'services/synapse/**'
+            prosody:
+              - 'services/prosody/**'
+            dossi:
+              - 'services/dossi/**'
+            sms_pipeline:
+              - 'services/sms_pipeline/**'
+            voicemail_pipeline:
+              - 'services/voicemail_pipeline/**'
+            rtt_bridge:
+              - 'services/rtt-bridge/**'
+            nginx:
+              - 'services/nginx/**'
+            kubernetes:
+              - 'k8s/**'
+            terraform:
+              - 'terraform/**'
+
+  build-asterisk:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.asterisk == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/asterisk
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/asterisk:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/asterisk:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-synapse:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.synapse == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/synapse
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/synapse:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/synapse:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-prosody:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.prosody == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/prosody
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/prosody:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/prosody:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-dossi:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.dossi == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/dossi
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/dossi:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/dossi:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-sms-pipeline:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.sms_pipeline == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/sms_pipeline
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/sms_pipeline:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/sms_pipeline:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-voicemail-pipeline:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.voicemail_pipeline == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/voicemail_pipeline
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/voicemail_pipeline:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/voicemail_pipeline:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-rtt-bridge:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.rtt_bridge == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/rtt-bridge
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/rtt-bridge:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/rtt-bridge:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  validate-kubernetes:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.kubernetes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+      - name: Validate base kustomization
+        run: kustomize build k8s/base > /dev/null
+      - name: Validate app kustomizations
+        run: |
+          for dir in k8s/apps/*/; do
+            echo "Validating $dir"
+            kustomize build "$dir" > /dev/null
+          done
+      - name: Install kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+      - name: Validate Kubernetes manifests
+        run: |
+          kustomize build k8s/base | kubeval --ignore-missing-schemas --strict
+          for dir in k8s/apps/*/; do
+            echo "Validating $dir"
+            kustomize build "$dir" | kubeval --ignore-missing-schemas --strict
+          done
+
+  validate-terraform:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive terraform/
+      - name: Terraform init
+        run: |
+          cd terraform
+          terraform init -backend=false
+      - name: Terraform validate
+        run: |
+          cd terraform
+          terraform validate

@@ -1,0 +1,164 @@
+# cert-manager installation and configuration
+# Install cert-manager first: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.0/cert-manager.yaml
+
+---
+# ClusterIssuer for primary domain (pyrosec.is) using Cloudflare DNS01
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cloudflare-primary
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@pyrosec.is
+    privateKeySecretRef:
+      name: letsencrypt-primary-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-primary
+              key: api-token
+        selector:
+          dnsZones:
+            - pyrosec.is
+---
+# ClusterIssuer for STUN domain (pyrosec.gg) using Cloudflare DNS01
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cloudflare-stun
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@pyrosec.gg
+    privateKeySecretRef:
+      name: letsencrypt-stun-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-stun
+              key: api-token
+        selector:
+          dnsZones:
+            - pyrosec.gg
+---
+# Certificate for primary domain (pyrosec.is) - wildcard + apex
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pyrosec-is-cert
+  namespace: ghost
+spec:
+  secretName: pyrosec-is-tls
+  issuerRef:
+    name: letsencrypt-cloudflare-primary
+    kind: ClusterIssuer
+  commonName: pyrosec.is
+  dnsNames:
+    - pyrosec.is
+    - "*.pyrosec.is"
+  # Store in shared PVC for services that need direct cert access
+  secretTemplate:
+    labels:
+      app.kubernetes.io/name: certificates
+---
+# Certificate for STUN domain (pyrosec.gg)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pyrosec-gg-cert
+  namespace: ghost
+spec:
+  secretName: pyrosec-gg-tls
+  issuerRef:
+    name: letsencrypt-cloudflare-stun
+    kind: ClusterIssuer
+  commonName: pyrosec.gg
+  dnsNames:
+    - pyrosec.gg
+    - "*.pyrosec.gg"
+  secretTemplate:
+    labels:
+      app.kubernetes.io/name: certificates
+---
+# Job to sync certificates to shared PVC (for services needing file-based certs)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cert-sync
+  namespace: ghost
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: cert-sync
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  # Create directory structure
+                  mkdir -p /certs/live/pyrosec.is
+                  mkdir -p /certs/live/pyrosec.gg
+
+                  # Extract and copy primary domain certs
+                  kubectl get secret pyrosec-is-tls -n ghost -o jsonpath='{.data.tls\.crt}' | base64 -d > /certs/live/pyrosec.is/fullchain.pem
+                  kubectl get secret pyrosec-is-tls -n ghost -o jsonpath='{.data.tls\.key}' | base64 -d > /certs/live/pyrosec.is/privkey.pem
+
+                  # Extract and copy STUN domain certs
+                  kubectl get secret pyrosec-gg-tls -n ghost -o jsonpath='{.data.tls\.crt}' | base64 -d > /certs/live/pyrosec.gg/fullchain.pem
+                  kubectl get secret pyrosec-gg-tls -n ghost -o jsonpath='{.data.tls\.key}' | base64 -d > /certs/live/pyrosec.gg/privkey.pem
+
+                  # Set permissions
+                  chmod 644 /certs/live/*/fullchain.pem
+                  chmod 600 /certs/live/*/privkey.pem
+
+                  echo "Certificates synced successfully"
+              volumeMounts:
+                - name: certificates
+                  mountPath: /certs
+          volumes:
+            - name: certificates
+              persistentVolumeClaim:
+                claimName: certificates
+          restartPolicy: OnFailure
+          serviceAccountName: cert-sync
+---
+# ServiceAccount for cert-sync job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-sync
+  namespace: ghost
+---
+# Role to read secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cert-sync-role
+  namespace: ghost
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["pyrosec-is-tls", "pyrosec-gg-tls"]
+    verbs: ["get"]
+---
+# RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cert-sync-binding
+  namespace: ghost
+subjects:
+  - kind: ServiceAccount
+    name: cert-sync
+    namespace: ghost
+roleRef:
+  kind: Role
+  name: cert-sync-role
+  apiGroup: rbac.authorization.k8s.io

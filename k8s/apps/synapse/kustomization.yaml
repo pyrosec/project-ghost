@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ghost
+
+resources:
+  - deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/name: synapse
+  app.kubernetes.io/component: matrix-server

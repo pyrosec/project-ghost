@@ -1,0 +1,49 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm'
+        required: true
+        type: string
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'destroy'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Destroy Plan
+        run: |
+          cd terraform
+          terraform plan -destroy \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="cloudflare_api_token_primary=${{ secrets.CLOUDFLARE_API_TOKEN_PRIMARY }}" \
+            -var="cloudflare_api_token_stun=${{ secrets.CLOUDFLARE_API_TOKEN_STUN }}"
+
+      - name: Terraform Destroy
+        run: |
+          cd terraform
+          terraform destroy -auto-approve \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="cloudflare_api_token_primary=${{ secrets.CLOUDFLARE_API_TOKEN_PRIMARY }}" \
+            -var="cloudflare_api_token_stun=${{ secrets.CLOUDFLARE_API_TOKEN_STUN }}"

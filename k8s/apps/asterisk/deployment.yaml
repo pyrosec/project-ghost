@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asterisk
+  namespace: ghost
+  labels:
+    app: asterisk
+    redis-client: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asterisk
+  template:
+    metadata:
+      labels:
+        app: asterisk
+        redis-client: "true"
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis 6379; do
+                echo "Waiting for redis..."
+                sleep 2
+              done
+      containers:
+        - name: asterisk
+          image: ghostdial/asterisk:latest
+          ports:
+            - containerPort: 35061
+              name: sip-tls
+              protocol: TCP
+            - containerPort: 8088
+              name: http
+              protocol: TCP
+          # RTP ports handled by LoadBalancer portRange
+          envFrom:
+            - configMapRef:
+                name: asterisk-config
+            - configMapRef:
+                name: ghost-config
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: REDIS_URI
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          volumeMounts:
+            - name: asterisk-data
+              mountPath: /etc/asterisk
+            - name: asterisk-spool
+              mountPath: /var/spool/asterisk
+            - name: certificates
+              mountPath: /etc/letsencrypt
+              readOnly: true
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - SYS_PTRACE
+          livenessProbe:
+            tcpSocket:
+              port: 35061
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 35061
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: asterisk-data
+          persistentVolumeClaim:
+            claimName: asterisk-data
+        - name: asterisk-spool
+          persistentVolumeClaim:
+            claimName: asterisk-spool
+        - name: certificates
+          persistentVolumeClaim:
+            claimName: certificates
+---
+# LoadBalancer for direct SIP access (bypasses ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: asterisk-external
+  namespace: ghost
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+    networking.gke.io/load-balancer-ip-addresses: "ghost-asterisk-ip"
+spec:
+  selector:
+    app: asterisk
+  type: LoadBalancer
+  loadBalancerIP: "" # Set from Terraform output
+  ports:
+    - port: 35061
+      targetPort: 35061
+      name: sip-tls
+      protocol: TCP
+    - port: 30000
+      targetPort: 30000
+      name: rtp-0
+      protocol: UDP
+    - port: 30001
+      targetPort: 30001
+      name: rtp-1
+      protocol: UDP
+    - port: 30002
+      targetPort: 30002
+      name: rtp-2
+      protocol: UDP
+    - port: 30003
+      targetPort: 30003
+      name: rtp-3
+      protocol: UDP
+    - port: 30004
+      targetPort: 30004
+      name: rtp-4
+      protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asterisk
+  namespace: ghost
+spec:
+  selector:
+    app: asterisk
+  ports:
+    - port: 8088
+      targetPort: 8088
+      name: http
+  type: ClusterIP

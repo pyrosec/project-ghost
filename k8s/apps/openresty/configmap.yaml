@@ -1,0 +1,199 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openresty-config
+  namespace: ghost
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 4096;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        client_max_body_size 500M;
+
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript
+                   application/xml application/xml+rss text/javascript application/x-javascript;
+
+        # SSL Settings
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers on;
+        ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 1d;
+        ssl_session_tickets off;
+        ssl_stapling on;
+        ssl_stapling_verify on;
+
+        # Upstream definitions
+        upstream synapse {
+            server synapse:8008;
+            keepalive 32;
+        }
+
+        upstream vaultwarden {
+            server vaultwarden:80;
+            keepalive 32;
+        }
+
+        upstream vaultwarden_ws {
+            server vaultwarden:3012;
+            keepalive 32;
+        }
+
+        # HTTP -> HTTPS redirect
+        server {
+            listen 80;
+            server_name _;
+
+            location /.well-known/acme-challenge/ {
+                root /var/www/certbot;
+            }
+
+            location / {
+                return 301 https://$host$request_uri;
+            }
+        }
+
+        # Matrix server - matrix.pyrosec.is
+        server {
+            listen 443 ssl http2;
+            server_name matrix.pyrosec.is;
+
+            ssl_certificate /etc/letsencrypt/live/pyrosec.is/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/pyrosec.is/privkey.pem;
+
+            # Matrix well-known for client discovery
+            location /.well-known/matrix/client {
+                default_type application/json;
+                add_header Access-Control-Allow-Origin *;
+                return 200 '{"m.homeserver": {"base_url": "https://matrix.pyrosec.is"}}';
+            }
+
+            location /.well-known/matrix/server {
+                default_type application/json;
+                return 200 '{"m.server": "matrix.pyrosec.is:443"}';
+            }
+
+            # Synapse endpoints
+            location ~ ^(/_matrix|/_synapse/client) {
+                proxy_pass http://synapse;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # WebSocket support
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+
+                # Timeouts for long-polling
+                proxy_read_timeout 600s;
+                proxy_send_timeout 600s;
+
+                client_max_body_size 500M;
+            }
+
+            location / {
+                proxy_pass http://synapse;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+
+        # Vaultwarden - vault.pyrosec.is
+        server {
+            listen 443 ssl http2;
+            server_name vault.pyrosec.is;
+
+            ssl_certificate /etc/letsencrypt/live/pyrosec.is/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/pyrosec.is/privkey.pem;
+
+            # Vaultwarden WebSocket for live sync
+            location /notifications/hub {
+                proxy_pass http://vaultwarden_ws;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            location /notifications/hub/negotiate {
+                proxy_pass http://vaultwarden;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            location / {
+                proxy_pass http://vaultwarden;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+        }
+
+        # Primary domain - pyrosec.is (root)
+        server {
+            listen 443 ssl http2;
+            server_name pyrosec.is;
+
+            ssl_certificate /etc/letsencrypt/live/pyrosec.is/fullchain.pem;
+            ssl_certificate_key /etc/letsencrypt/live/pyrosec.is/privkey.pem;
+
+            # Matrix well-known at root domain
+            location /.well-known/matrix/client {
+                default_type application/json;
+                add_header Access-Control-Allow-Origin *;
+                return 200 '{"m.homeserver": {"base_url": "https://matrix.pyrosec.is"}}';
+            }
+
+            location /.well-known/matrix/server {
+                default_type application/json;
+                return 200 '{"m.server": "matrix.pyrosec.is:443"}';
+            }
+
+            location / {
+                root /var/www/html;
+                index index.html;
+            }
+        }
+    }

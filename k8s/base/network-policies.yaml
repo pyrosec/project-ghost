@@ -1,0 +1,159 @@
+# Network policies for service isolation
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: ghost
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-controller
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: openresty
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-traffic
+  namespace: ghost
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: ghost
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              redis-client: "true"
+      ports:
+        - protocol: TCP
+          port: 6379
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-access
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              postgres-client: "true"
+      ports:
+        - protocol: TCP
+          port: 5432
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-asterisk-external
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: asterisk
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 35061
+        - protocol: UDP
+          port: 30000
+        - protocol: UDP
+          port: 30001
+        - protocol: UDP
+          port: 30002
+        - protocol: UDP
+          port: 30003
+        - protocol: UDP
+          port: 30004
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-coturn-external
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: coturn
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 3478
+        - protocol: UDP
+          port: 3478
+        - protocol: TCP
+          port: 5349
+        - protocol: UDP
+          port: 5349
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prosody-external
+  namespace: ghost
+spec:
+  podSelector:
+    matchLabels:
+      app: prosody
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 5222
+        - protocol: TCP
+          port: 5223
+        - protocol: TCP
+          port: 5269
+        - protocol: TCP
+          port: 5280
+        - protocol: TCP
+          port: 5281
+  policyTypes:
+    - Ingress

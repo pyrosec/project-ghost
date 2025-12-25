@@ -1,0 +1,71 @@
+name: Flux Bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster_name:
+        description: 'GKE Cluster Name'
+        required: true
+        default: 'ghost-cluster'
+      install_cert_manager:
+        description: 'Install cert-manager'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_ZONE: us-central1-a
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ inputs.cluster_name }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Install Flux CLI
+        run: curl -s https://fluxcd.io/install.sh | sudo bash
+
+      - name: Install cert-manager
+        if: inputs.install_cert_manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.0/cert-manager.yaml
+          kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=300s
+
+      - name: Bootstrap Flux
+        env:
+          GITHUB_TOKEN: ${{ secrets.FLUX_GITHUB_TOKEN }}
+        run: |
+          flux bootstrap github \
+            --owner=${{ github.repository_owner }} \
+            --repository=${{ github.event.repository.name }} \
+            --branch=master \
+            --path=k8s/flux-system \
+            --personal=false \
+            --components-extra=image-reflector-controller,image-automation-controller
+
+      - name: Install Flux image automation components
+        run: |
+          flux create source git project-ghost \
+            --url=https://github.com/${{ github.repository }} \
+            --branch=master \
+            --interval=1m
+
+      - name: Apply Kustomizations
+        run: |
+          kubectl apply -f k8s/flux-system/gotk-sync.yaml
+
+      - name: Verify Installation
+        run: |
+          flux check
+          flux get sources git
+          flux get kustomizations

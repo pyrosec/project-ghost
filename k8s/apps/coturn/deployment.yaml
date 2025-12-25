@@ -1,0 +1,244 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coturn-config
+  namespace: ghost
+data:
+  turnserver.conf: |
+    # Coturn TURN/STUN server configuration for DTLS
+
+    # Listener configuration - dual IP setup for DTLS
+    listening-port=3478
+    tls-listening-port=5349
+
+    # Alternative listening port for second interface
+    alt-listening-port=3479
+    alt-tls-listening-port=5350
+
+    # Use fingerprint in TURN message
+    fingerprint
+
+    # Use long-term credential mechanism
+    lt-cred-mech
+
+    # Realm (domain)
+    realm=pyrosec.gg
+
+    # Server name for TLS SNI
+    server-name=pyrosec.gg
+
+    # Certificate for TLS/DTLS
+    cert=/etc/letsencrypt/live/pyrosec.gg/fullchain.pem
+    pkey=/etc/letsencrypt/live/pyrosec.gg/privkey.pem
+
+    # Enable DTLS (encrypted UDP)
+    no-dtls=false
+
+    # Cipher list for TLS/DTLS
+    cipher-list="ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305"
+
+    # ECDH curve
+    ec-curve-name=prime256v1
+
+    # UDP relay threads
+    relay-threads=4
+
+    # Min/max relay ports
+    min-port=49152
+    max-port=65535
+
+    # Verbose logging
+    verbose
+
+    # Log file
+    log-file=/var/log/turnserver.log
+
+    # Disable multicast peers
+    no-multicast-peers
+
+    # Disable CLI
+    no-cli
+
+    # Deny traffic to private IPs (security)
+    denied-peer-ip=10.0.0.0-10.255.255.255
+    denied-peer-ip=172.16.0.0-172.31.255.255
+    denied-peer-ip=192.168.0.0-192.168.255.255
+
+    # User quota
+    user-quota=12
+    total-quota=1200
+
+    # Max bps per session (10 Mbps)
+    max-bps=10000000
+
+    # Stale nonce lifetime
+    stale-nonce=600
+
+    # Use auth secret (for time-limited credentials)
+    use-auth-secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coturn
+  namespace: ghost
+  labels:
+    app: coturn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coturn
+  template:
+    metadata:
+      labels:
+        app: coturn
+    spec:
+      hostNetwork: false
+      containers:
+        - name: coturn
+          image: coturn/coturn:4.6-alpine
+          args:
+            - -c
+            - /etc/turnserver.conf
+            - --static-auth-secret=$(TURN_SHARED_SECRET)
+            - --external-ip=$(EXTERNAL_IP_1)
+            - --external-ip=$(EXTERNAL_IP_2)
+            - --listening-ip=0.0.0.0
+            - --relay-ip=0.0.0.0
+          env:
+            - name: TURN_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: TURN_SHARED_SECRET
+            - name: EXTERNAL_IP_1
+              valueFrom:
+                configMapKeyRef:
+                  name: coturn-external-ips
+                  key: IP_1
+            - name: EXTERNAL_IP_2
+              valueFrom:
+                configMapKeyRef:
+                  name: coturn-external-ips
+                  key: IP_2
+          ports:
+            # STUN/TURN UDP
+            - containerPort: 3478
+              protocol: UDP
+              name: stun-udp
+            - containerPort: 3478
+              protocol: TCP
+              name: stun-tcp
+            # STUN/TURN TLS/DTLS
+            - containerPort: 5349
+              protocol: UDP
+              name: turns-udp
+            - containerPort: 5349
+              protocol: TCP
+              name: turns-tcp
+            # Alt ports for second interface
+            - containerPort: 3479
+              protocol: UDP
+              name: stun-alt-udp
+            - containerPort: 5350
+              protocol: UDP
+              name: turns-alt-udp
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/turnserver.conf
+              subPath: turnserver.conf
+            - name: certificates
+              mountPath: /etc/letsencrypt
+              readOnly: true
+          securityContext:
+            capabilities:
+              add:
+                - NET_BIND_SERVICE
+          livenessProbe:
+            exec:
+              command:
+                - turnadmin
+                - -l
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: coturn-config
+        - name: certificates
+          persistentVolumeClaim:
+            claimName: certificates
+---
+# ConfigMap for external IPs (populated by Terraform or manually)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coturn-external-ips
+  namespace: ghost
+data:
+  IP_1: "REPLACE_WITH_COTURN_IP_1"
+  IP_2: "REPLACE_WITH_COTURN_IP_2"
+---
+# LoadBalancer Service for Coturn - Primary IP
+apiVersion: v1
+kind: Service
+metadata:
+  name: coturn-primary
+  namespace: ghost
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+    networking.gke.io/load-balancer-ip-addresses: "ghost-coturn-ip-1"
+spec:
+  selector:
+    app: coturn
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - port: 3478
+      targetPort: 3478
+      protocol: UDP
+      name: stun-udp
+    - port: 3478
+      targetPort: 3478
+      protocol: TCP
+      name: stun-tcp
+    - port: 5349
+      targetPort: 5349
+      protocol: UDP
+      name: turns-udp
+    - port: 5349
+      targetPort: 5349
+      protocol: TCP
+      name: turns-tcp
+---
+# LoadBalancer Service for Coturn - Secondary IP (relay)
+apiVersion: v1
+kind: Service
+metadata:
+  name: coturn-relay
+  namespace: ghost
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+    networking.gke.io/load-balancer-ip-addresses: "ghost-coturn-ip-2"
+spec:
+  selector:
+    app: coturn
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - port: 3479
+      targetPort: 3479
+      protocol: UDP
+      name: stun-alt-udp
+    - port: 5350
+      targetPort: 5350
+      protocol: UDP
+      name: turns-alt-udp

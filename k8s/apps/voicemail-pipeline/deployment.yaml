@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voicemail-pipeline
+  namespace: ghost
+  labels:
+    app: voicemail-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voicemail-pipeline
+  template:
+    metadata:
+      labels:
+        app: voicemail-pipeline
+    spec:
+      serviceAccountName: ghost-workload
+      containers:
+        - name: voicemail-pipeline
+          image: ghostdial/voicemail_pipeline:latest
+          envFrom:
+            - configMapRef:
+                name: ghost-config
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/gcloud/serviceaccount.json"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: asterisk-data
+              mountPath: /etc/asterisk
+              readOnly: true
+            - name: asterisk-spool
+              mountPath: /var/spool/asterisk
+            - name: prosody-data
+              mountPath: /var/lib/prosody
+            - name: gcloud-credentials
+              mountPath: /gcloud
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - pgrep
+                - node
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: asterisk-data
+          persistentVolumeClaim:
+            claimName: asterisk-data
+        - name: asterisk-spool
+          persistentVolumeClaim:
+            claimName: asterisk-spool
+        - name: prosody-data
+          persistentVolumeClaim:
+            claimName: prosody-data
+        - name: gcloud-credentials
+          secret:
+            secretName: gcloud-credentials
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ghost-workload
+  namespace: ghost
+  annotations:
+    iam.gke.io/gcp-service-account: ghost-workload-sa@project-ghost-695752.iam.gserviceaccount.com

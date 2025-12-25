@@ -1,0 +1,205 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'k8s/**'
+      - 'terraform/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      component:
+        description: 'Component to deploy (leave empty for all)'
+        required: false
+        type: string
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ghost-cluster
+  GKE_ZONE: us-central1-a
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'terraform/') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform plan -out=tfplan \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="cloudflare_api_token_primary=${{ secrets.CLOUDFLARE_API_TOKEN_PRIMARY }}" \
+            -var="cloudflare_api_token_stun=${{ secrets.CLOUDFLARE_API_TOKEN_STUN }}"
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
+
+  terraform-apply:
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+      - name: Export Outputs
+        id: outputs
+        run: |
+          cd terraform
+          echo "ingress_ip=$(terraform output -raw ingress_ip)" >> $GITHUB_OUTPUT
+          echo "asterisk_ip=$(terraform output -raw asterisk_ip)" >> $GITHUB_OUTPUT
+          echo "coturn_ip_1=$(terraform output -raw coturn_ip_1)" >> $GITHUB_OUTPUT
+          echo "coturn_ip_2=$(terraform output -raw coturn_ip_2)" >> $GITHUB_OUTPUT
+
+  sync-secrets:
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    if: always() && (needs.terraform-apply.result == 'success' || needs.terraform-apply.result == 'skipped')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Create Ghost Namespace
+        run: kubectl create namespace ghost --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync Secrets
+        run: |
+          # Create ghost-secrets
+          kubectl create secret generic ghost-secrets \
+            --namespace=ghost \
+            --from-literal=DOMAIN=${{ secrets.DOMAIN }} \
+            --from-literal=ROOT_PASSWORD=${{ secrets.ROOT_PASSWORD }} \
+            --from-literal=VOIPMS_SIP_USERNAME=${{ secrets.VOIPMS_SIP_USERNAME }} \
+            --from-literal=VOIPMS_SIP_PASSWORD=${{ secrets.VOIPMS_SIP_PASSWORD }} \
+            --from-literal=VOIPMS_SIP_HOST=${{ secrets.VOIPMS_SIP_HOST }} \
+            --from-literal=VOIPMS_SIP_PORT=${{ secrets.VOIPMS_SIP_PORT }} \
+            --from-literal=VOIPMS_API_USERNAME=${{ secrets.VOIPMS_API_USERNAME }} \
+            --from-literal=VOIPMS_API_PASSWORD=${{ secrets.VOIPMS_API_PASSWORD }} \
+            --from-literal=TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }} \
+            --from-literal=TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }} \
+            --from-literal=ENDATO_API_KEY=${{ secrets.ENDATO_API_KEY }} \
+            --from-literal=ENDATO_API_SECRET=${{ secrets.ENDATO_API_SECRET }} \
+            --from-literal=RECAPTCHA_PUBLIC_KEY=${{ secrets.RECAPTCHA_PUBLIC_KEY }} \
+            --from-literal=RECAPTCHA_PRIVATE_KEY=${{ secrets.RECAPTCHA_PRIVATE_KEY }} \
+            --from-literal=TURN_SHARED_SECRET=${{ secrets.TURN_SHARED_SECRET }} \
+            --from-literal=AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
+            --from-literal=AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+            --from-literal=AWS_REGION=${{ secrets.AWS_REGION }} \
+            --from-literal=AWS_MODEL=${{ secrets.AWS_MODEL }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Create postgres-secrets
+          kubectl create secret generic postgres-secrets \
+            --namespace=ghost \
+            --from-literal=POSTGRES_USER=matrix \
+            --from-literal=POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --from-literal=POSTGRES_DB=matrix \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Create cert-manager namespace
+          kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
+
+          # Create Cloudflare API tokens for cert-manager
+          kubectl create secret generic cloudflare-api-token-primary \
+            --namespace=cert-manager \
+            --from-literal=api-token=${{ secrets.CLOUDFLARE_API_TOKEN_PRIMARY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic cloudflare-api-token-stun \
+            --namespace=cert-manager \
+            --from-literal=api-token=${{ secrets.CLOUDFLARE_API_TOKEN_STUN }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+  flux-reconcile:
+    runs-on: ubuntu-latest
+    needs: sync-secrets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Install Flux CLI
+        run: |
+          curl -s https://fluxcd.io/install.sh | sudo bash
+
+      - name: Check Flux Status
+        run: flux check
+
+      - name: Reconcile Flux
+        run: |
+          flux reconcile source git project-ghost
+          flux reconcile kustomization ghost-base
+          flux reconcile kustomization ghost-apps
+
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/redis -n ghost --timeout=300s || true
+          kubectl rollout status statefulset/postgres -n ghost --timeout=300s || true
+          kubectl rollout status deployment/synapse -n ghost --timeout=300s || true
+          kubectl rollout status deployment/vaultwarden -n ghost --timeout=300s || true
+          kubectl rollout status deployment/openresty -n ghost --timeout=300s || true

@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ghost
+
+resources:
+  - namespace.yaml
+  - configmaps.yaml
+  - storage.yaml
+  - network-policies.yaml
+
+# Secrets are managed separately via External Secrets or Sealed Secrets
+# - secrets.yaml (template only, not applied directly)
+
+commonLabels:
+  app.kubernetes.io/part-of: project-ghost
+  app.kubernetes.io/managed-by: flux

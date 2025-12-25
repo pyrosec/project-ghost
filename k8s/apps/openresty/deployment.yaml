@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openresty
+  namespace: ghost
+  labels:
+    app: openresty
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: openresty
+  template:
+    metadata:
+      labels:
+        app: openresty
+    spec:
+      containers:
+        - name: openresty
+          image: openresty/openresty:alpine
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 443
+              name: https
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          volumeMounts:
+            - name: openresty-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: certificates
+              mountPath: /etc/letsencrypt
+              readOnly: true
+            - name: www-data
+              mountPath: /var/www
+            - name: certbot-www
+              mountPath: /var/www/certbot
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 3
+      volumes:
+        - name: openresty-config
+          configMap:
+            name: openresty-config
+        - name: certificates
+          persistentVolumeClaim:
+            claimName: certificates
+        - name: www-data
+          emptyDir: {}
+        - name: certbot-www
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openresty
+  namespace: ghost
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  selector:
+    app: openresty
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
+  type: ClusterIP
+---
+# Global Load Balancer via Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ghost-ingress
+  namespace: ghost
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "ghost-ingress-ip"
+    networking.gke.io/managed-certificates: "ghost-managed-cert"
+    kubernetes.io/ingress.class: "gce"
+spec:
+  defaultBackend:
+    service:
+      name: openresty
+      port:
+        number: 443
+  rules:
+    - host: pyrosec.is
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openresty
+                port:
+                  number: 443
+    - host: matrix.pyrosec.is
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openresty
+                port:
+                  number: 443
+    - host: vault.pyrosec.is
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openresty
+                port:
+                  number: 443
+---
+# GKE Managed Certificate (alternative to cert-manager)
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: ghost-managed-cert
+  namespace: ghost
+spec:
+  domains:
+    - pyrosec.is
+    - matrix.pyrosec.is
+    - vault.pyrosec.is

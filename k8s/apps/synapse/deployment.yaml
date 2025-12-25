@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synapse
+  namespace: ghost
+  labels:
+    app: synapse
+    postgres-client: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: synapse
+  template:
+    metadata:
+      labels:
+        app: synapse
+        postgres-client: "true"
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "Waiting for postgres..."
+                sleep 2
+              done
+      containers:
+        - name: synapse
+          image: ghostdial/synapse:latest
+          ports:
+            - containerPort: 8008
+              name: http
+          envFrom:
+            - configMapRef:
+                name: synapse-config
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: SYNAPSE_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: MATRIX_SERVER_NAME
+            - name: POSTGRES_HOST
+              value: postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_DB
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          volumeMounts:
+            - name: synapse-data
+              mountPath: /data
+            - name: certificates
+              mountPath: /certs
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8008
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8008
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: synapse-data
+          persistentVolumeClaim:
+            claimName: synapse-data
+        - name: certificates
+          persistentVolumeClaim:
+            claimName: certificates
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: synapse
+  namespace: ghost
+spec:
+  selector:
+    app: synapse
+  ports:
+    - port: 8008
+      targetPort: 8008
+      name: http
+  type: ClusterIP

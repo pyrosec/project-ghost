@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prosody
+  namespace: ghost
+  labels:
+    app: prosody
+    redis-client: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prosody
+  template:
+    metadata:
+      labels:
+        app: prosody
+        redis-client: "true"
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis 6379; do
+                echo "Waiting for redis..."
+                sleep 2
+              done
+      containers:
+        - name: prosody
+          image: ghostdial/prosody:latest
+          ports:
+            - containerPort: 5222
+              name: xmpp-client
+            - containerPort: 5223
+              name: xmpp-client-tls
+            - containerPort: 5269
+              name: xmpp-server
+            - containerPort: 5280
+              name: http
+            - containerPort: 5281
+              name: https
+            - containerPort: 5347
+              name: component
+          envFrom:
+            - configMapRef:
+                name: prosody-config
+            - configMapRef:
+                name: ghost-config
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: REDIS_URI
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: prosody-data
+              mountPath: /var/lib/prosody
+            - name: certificates
+              mountPath: /etc/letsencrypt
+              readOnly: true
+          livenessProbe:
+            tcpSocket:
+              port: 5222
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 5222
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: prosody-data
+          persistentVolumeClaim:
+            claimName: prosody-data
+        - name: certificates
+          persistentVolumeClaim:
+            claimName: certificates
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prosody
+  namespace: ghost
+spec:
+  selector:
+    app: prosody
+  ports:
+    - port: 5222
+      targetPort: 5222
+      name: xmpp-client
+    - port: 5223
+      targetPort: 5223
+      name: xmpp-client-tls
+    - port: 5269
+      targetPort: 5269
+      name: xmpp-server
+    - port: 5280
+      targetPort: 5280
+      name: http
+    - port: 5281
+      targetPort: 5281
+      name: https
+    - port: 5347
+      targetPort: 5347
+      name: component
+  type: ClusterIP
+---
+# External LoadBalancer for XMPP federation
+apiVersion: v1
+kind: Service
+metadata:
+  name: prosody-external
+  namespace: ghost
+spec:
+  selector:
+    app: prosody
+  type: LoadBalancer
+  ports:
+    - port: 5222
+      targetPort: 5222
+      name: xmpp-client
+    - port: 5223
+      targetPort: 5223
+      name: xmpp-client-tls
+    - port: 5269
+      targetPort: 5269
+      name: xmpp-server

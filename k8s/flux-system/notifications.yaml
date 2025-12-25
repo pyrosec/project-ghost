@@ -1,0 +1,33 @@
+# Flux Notifications for deployment alerts
+---
+# Provider for GitHub (commit status)
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-status
+  namespace: flux-system
+spec:
+  type: github
+  address: https://github.com/pyrosec/project-ghost
+  secretRef:
+    name: github-token
+---
+# Alert for deployment events
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: ghost-alerts
+  namespace: flux-system
+spec:
+  providerRef:
+    name: github-status
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: ghost-base
+    - kind: Kustomization
+      name: ghost-apps
+    - kind: GitRepository
+      name: project-ghost
+  exclusionList:
+    - "^Dependencies.*"
