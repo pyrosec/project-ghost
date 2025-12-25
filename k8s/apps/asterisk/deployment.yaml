@@ -90,25 +90,38 @@ spec:
           persistentVolumeClaim:
             claimName: certificates
 ---
-# LoadBalancer for direct SIP access (bypasses ingress)
+# LoadBalancer for SIP TLS (TCP only)
 apiVersion: v1
 kind: Service
 metadata:
-  name: asterisk-external
+  name: asterisk-sip
   namespace: ghost
   annotations:
     cloud.google.com/load-balancer-type: "External"
-    networking.gke.io/load-balancer-ip-addresses: "ghost-asterisk-ip"
 spec:
   selector:
     app: asterisk
   type: LoadBalancer
-  loadBalancerIP: "" # Set from Terraform output
   ports:
     - port: 35061
       targetPort: 35061
       name: sip-tls
       protocol: TCP
+---
+# LoadBalancer for RTP media (UDP only)
+# Note: For production, consider using NodePort or hostNetwork for RTP
+apiVersion: v1
+kind: Service
+metadata:
+  name: asterisk-rtp
+  namespace: ghost
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  selector:
+    app: asterisk
+  type: LoadBalancer
+  ports:
     - port: 30000
       targetPort: 30000
       name: rtp-0

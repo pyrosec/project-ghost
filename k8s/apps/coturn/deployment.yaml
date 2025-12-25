@@ -187,15 +187,14 @@ data:
   IP_1: "REPLACE_WITH_COTURN_IP_1"
   IP_2: "REPLACE_WITH_COTURN_IP_2"
 ---
-# LoadBalancer Service for Coturn - Primary IP
+# LoadBalancer Service for Coturn - UDP (STUN/TURN)
 apiVersion: v1
 kind: Service
 metadata:
-  name: coturn-primary
+  name: coturn-udp
   namespace: ghost
   annotations:
     cloud.google.com/load-balancer-type: "External"
-    networking.gke.io/load-balancer-ip-addresses: "ghost-coturn-ip-1"
 spec:
   selector:
     app: coturn
@@ -206,14 +205,29 @@ spec:
       targetPort: 3478
       protocol: UDP
       name: stun-udp
-    - port: 3478
-      targetPort: 3478
-      protocol: TCP
-      name: stun-tcp
     - port: 5349
       targetPort: 5349
       protocol: UDP
       name: turns-udp
+---
+# LoadBalancer Service for Coturn - TCP (TURN over TCP/TLS)
+apiVersion: v1
+kind: Service
+metadata:
+  name: coturn-tcp
+  namespace: ghost
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  selector:
+    app: coturn
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - port: 3478
+      targetPort: 3478
+      protocol: TCP
+      name: stun-tcp
     - port: 5349
       targetPort: 5349
       protocol: TCP

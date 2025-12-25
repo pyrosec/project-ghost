@@ -103,6 +103,8 @@ spec:
     requests:
       storage: 5Gi
 ---
+# Note: For shared certificates across pods, we use cert-manager Secrets
+# instead of a shared PVC. This PVC is kept for legacy compatibility.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -110,8 +112,8 @@ metadata:
   namespace: ghost
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: standard-rwx
+    - ReadWriteOnce
+  storageClassName: standard-rwo
   resources:
     requests:
       storage: 1Gi
