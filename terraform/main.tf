@@ -342,8 +342,11 @@ resource "google_storage_bucket_iam_member" "ghost_workload_storage" {
 }
 
 # Workload Identity binding
+# Depends on node pool to ensure identity pool is fully initialized
 resource "google_service_account_iam_member" "workload_identity_binding" {
   service_account_id = google_service_account.ghost_workload_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[ghost/ghost-workload]"
+
+  depends_on = [google_container_node_pool.ghost_nodes]
 }

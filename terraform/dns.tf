@@ -39,24 +39,26 @@ resource "cloudflare_record" "primary_root" {
 
 # Matrix subdomain
 resource "cloudflare_record" "matrix" {
-  provider = cloudflare.primary
-  zone_id  = data.cloudflare_zone.primary.id
-  name     = "matrix"
-  content  = google_compute_global_address.ingress_ip.address
-  type     = "A"
-  proxied  = false
-  ttl      = 300
+  provider        = cloudflare.primary
+  zone_id         = data.cloudflare_zone.primary.id
+  name            = "matrix"
+  content         = google_compute_global_address.ingress_ip.address
+  type            = "A"
+  proxied         = false
+  ttl             = 300
+  allow_overwrite = true
 }
 
 # Vault subdomain
 resource "cloudflare_record" "vault" {
-  provider = cloudflare.primary
-  zone_id  = data.cloudflare_zone.primary.id
-  name     = "vault"
-  content  = google_compute_global_address.ingress_ip.address
-  type     = "A"
-  proxied  = false
-  ttl      = 300
+  provider        = cloudflare.primary
+  zone_id         = data.cloudflare_zone.primary.id
+  name            = "vault"
+  content         = google_compute_global_address.ingress_ip.address
+  type            = "A"
+  proxied         = false
+  ttl             = 300
+  allow_overwrite = true
 }
 
 # Asterisk - direct SIP access (port 35061)
@@ -132,13 +134,14 @@ resource "cloudflare_record" "xmpp_server_srv" {
 
 # Root STUN record - Coturn IP 1
 resource "cloudflare_record" "stun_root" {
-  provider = cloudflare.stun
-  zone_id  = data.cloudflare_zone.stun.id
-  name     = "@"
-  content  = google_compute_address.coturn_ip_1.address
-  type     = "A"
-  proxied  = false
-  ttl      = 300
+  provider        = cloudflare.stun
+  zone_id         = data.cloudflare_zone.stun.id
+  name            = "@"
+  content         = google_compute_address.coturn_ip_1.address
+  type            = "A"
+  proxied         = false
+  ttl             = 300
+  allow_overwrite = true
 }
 
 # Secondary TURN record - Coturn IP 2 (for relay)
