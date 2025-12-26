@@ -102,7 +102,7 @@ metadata:
   namespace: ghost
   annotations:
     kubernetes.io/ingress.global-static-ip-name: "ghost-ingress-ip"
-    networking.gke.io/managed-certificates: "ghost-managed-cert"
+    networking.gke.io/managed-certificates: "ghost-web-cert"
     kubernetes.io/ingress.class: "gce"
 spec:
   defaultBackend:
@@ -136,7 +136,7 @@ spec:
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
-  name: ghost-managed-cert
+  name: ghost-web-cert
   namespace: ghost
 spec:
   domains:
