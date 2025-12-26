@@ -123,24 +123,3 @@ spec:
       targetPort: 5347
       name: component
   type: ClusterIP
----
-# External LoadBalancer for XMPP federation
-apiVersion: v1
-kind: Service
-metadata:
-  name: prosody-external
-  namespace: ghost
-spec:
-  selector:
-    app: prosody
-  type: LoadBalancer
-  ports:
-    - port: 5222
-      targetPort: 5222
-      name: xmpp-client
-    - port: 5223
-      targetPort: 5223
-      name: xmpp-client-tls
-    - port: 5269
-      targetPort: 5269
-      name: xmpp-server

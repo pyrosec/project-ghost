@@ -100,24 +100,6 @@ spec:
               - key: tls.key
                 path: privkey.pem
 ---
-# LoadBalancer for SIP TLS (TCP only)
-apiVersion: v1
-kind: Service
-metadata:
-  name: asterisk-sip
-  namespace: ghost
-  annotations:
-    cloud.google.com/load-balancer-type: "External"
-spec:
-  selector:
-    app: asterisk
-  type: LoadBalancer
-  ports:
-    - port: 35061
-      targetPort: 35061
-      name: sip-tls
-      protocol: TCP
----
 # LoadBalancer for RTP media (UDP only)
 # Note: For production, consider using NodePort or hostNetwork for RTP
 apiVersion: v1
@@ -165,4 +147,8 @@ spec:
     - port: 8088
       targetPort: 8088
       name: http
+    - port: 35061
+      targetPort: 35061
+      name: sip-tls
+      protocol: TCP
   type: ClusterIP

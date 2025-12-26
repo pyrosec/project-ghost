@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openvpn
+  namespace: ghost
+  labels:
+    app: openvpn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openvpn
+  template:
+    metadata:
+      labels:
+        app: openvpn
+    spec:
+      containers:
+      - name: openvpn
+        image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openvpn:latest
+        ports:
+        - containerPort: 1194
+          protocol: TCP
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true
+        volumeMounts:
+        - name: openvpn-pki
+          mountPath: /etc/openvpn/pki
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      - name: tinyproxy
+        image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/tinyproxy:latest
+        ports:
+        - containerPort: 8880
+          protocol: TCP
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"
+      volumes:
+      - name: openvpn-pki
+        secret:
+          secretName: openvpn-pki
+          defaultMode: 0600
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openvpn
+  namespace: ghost
+  labels:
+    app: openvpn
+spec:
+  type: ClusterIP
+  selector:
+    app: openvpn
+  ports:
+  - port: 1194
+    targetPort: 1194
+    protocol: TCP
+    name: openvpn
+  - port: 8880
+    targetPort: 8880
+    protocol: TCP
+    name: proxy
