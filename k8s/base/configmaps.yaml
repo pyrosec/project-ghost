@@ -7,7 +7,7 @@ data:
   PRIMARY_DOMAIN: "pyrosec.is"
   STUN_DOMAIN: "pyrosec.gg"
   STUN_HOST: "pyrosec.gg"
-  MATRIX_SERVER_NAME: "pyrosec.is"
+  MATRIX_SERVER_NAME: "matrix.pyrosec.is"
   GHOST_NUMBER: "8008888080"
   LOG_LEVEL: "INFO"
   REDIS_URI: "redis://redis:6379"
@@ -38,7 +38,7 @@ metadata:
   name: synapse-config
   namespace: ghost
 data:
-  SYNAPSE_SERVER_NAME: "pyrosec.is"
+  SYNAPSE_SERVER_NAME: "matrix.pyrosec.is"
   SYNAPSE_REPORT_STATS: "no"
   SYNAPSE_NO_TLS: "1"
   SYNAPSE_ENABLE_REGISTRATION: "yes"
