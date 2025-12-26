@@ -1,0 +1,67 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: #0a0a0a;
+  color: #00ff00;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+pre {
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1.2;
+  font-size: 10px;
+}
+
+@media (min-width: 768px) {
+  pre {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  pre {
+    font-size: 16px;
+  }
+}
+
+.container {
+  text-align: center;
+  padding: 20px;
+}
+
+.title {
+  margin-top: 20px;
+  font-size: 24px;
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+.subtitle {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #008800;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.pirate {
+  animation: flicker 3s infinite;
+}

@@ -56,6 +56,11 @@ data:
             keepalive 32;
         }
 
+        upstream ghostweb {
+            server ghost-web:3000;
+            keepalive 32;
+        }
+
         # Default server for health checks and routing
         server {
             listen 80 default_server;
@@ -192,9 +197,26 @@ data:
                 return 200 '{"m.server": "matrix.pyrosec.is:443"}';
             }
 
+            # Proxy all other requests to Next.js app
             location / {
-                root /var/www/html;
-                index index.html;
+                proxy_pass http://ghostweb;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header User-Agent $http_user_agent;
+
+                # Pass through Cloudflare headers if present
+                proxy_set_header CF-IPCountry $http_cf_ipcountry;
+                proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+
+                proxy_read_timeout 60s;
+                proxy_send_timeout 60s;
             }
         }
     }

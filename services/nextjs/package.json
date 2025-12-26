@@ -1,0 +1,23 @@
+{
+  "name": "ghost-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "next": "14.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "pg": "8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.10.5",
+    "@types/pg": "8.10.9",
+    "@types/react": "18.2.45",
+    "@types/react-dom": "18.2.18",
+    "typescript": "5.3.3"
+  }
+}
