@@ -23,6 +23,28 @@ data:
 
         access_log /var/log/nginx/tcp_access.log tcp_proxy;
 
+        # HTTP - pyrosec.is:80 -> OpenResty
+        upstream http_backend {
+            server openresty:80;
+        }
+        server {
+            listen 80;
+            proxy_pass http_backend;
+            proxy_timeout 60s;
+            proxy_connect_timeout 10s;
+        }
+
+        # HTTPS - pyrosec.is:443 -> OpenResty (TLS pass-through)
+        upstream https_backend {
+            server openresty:443;
+        }
+        server {
+            listen 443;
+            proxy_pass https_backend;
+            proxy_timeout 60s;
+            proxy_connect_timeout 10s;
+        }
+
         # OpenVPN - pyrosec.is:1194
         upstream openvpn_backend {
             server openvpn:1194;
@@ -111,6 +133,10 @@ spec:
       - name: nginx
         image: nginx:1.25-alpine
         ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
         - containerPort: 1194
           name: openvpn
         - containerPort: 8880
@@ -161,6 +187,14 @@ spec:
   selector:
     app: tcp-ingress
   ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
   - port: 1194
     targetPort: 1194
     protocol: TCP

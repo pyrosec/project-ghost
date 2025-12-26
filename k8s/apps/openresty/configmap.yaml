@@ -219,4 +219,177 @@ data:
                 proxy_send_timeout 60s;
             }
         }
+
+        # ============= HTTPS SERVERS =============
+
+        # Default HTTPS server
+        server {
+            listen 443 ssl default_server;
+            server_name _;
+
+            ssl_certificate /etc/ssl/certs/pyrosec.is/tls.crt;
+            ssl_certificate_key /etc/ssl/certs/pyrosec.is/tls.key;
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers HIGH:!aNULL:!MD5;
+
+            location /health {
+                access_log off;
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+
+            location / {
+                return 404;
+            }
+        }
+
+        # Matrix server HTTPS - matrix.pyrosec.is
+        server {
+            listen 443 ssl;
+            server_name matrix.pyrosec.is;
+
+            ssl_certificate /etc/ssl/certs/pyrosec.is/tls.crt;
+            ssl_certificate_key /etc/ssl/certs/pyrosec.is/tls.key;
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers HIGH:!aNULL:!MD5;
+
+            location /health {
+                access_log off;
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+
+            location /.well-known/matrix/client {
+                default_type application/json;
+                add_header Access-Control-Allow-Origin *;
+                return 200 '{"m.homeserver": {"base_url": "https://matrix.pyrosec.is"}}';
+            }
+
+            location /.well-known/matrix/server {
+                default_type application/json;
+                return 200 '{"m.server": "matrix.pyrosec.is:443"}';
+            }
+
+            location ~ ^(/_matrix|/_synapse/client) {
+                proxy_pass http://synapse;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+
+                proxy_read_timeout 600s;
+                proxy_send_timeout 600s;
+
+                client_max_body_size 500M;
+            }
+
+            location / {
+                proxy_pass http://synapse;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }
+        }
+
+        # Vaultwarden HTTPS - vault.pyrosec.is
+        server {
+            listen 443 ssl;
+            server_name vault.pyrosec.is;
+
+            ssl_certificate /etc/ssl/certs/pyrosec.is/tls.crt;
+            ssl_certificate_key /etc/ssl/certs/pyrosec.is/tls.key;
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers HIGH:!aNULL:!MD5;
+
+            location /health {
+                access_log off;
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+
+            location /notifications/hub {
+                proxy_pass http://vaultwarden_ws;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            location /notifications/hub/negotiate {
+                proxy_pass http://vaultwarden;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }
+
+            location / {
+                proxy_pass http://vaultwarden;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+        }
+
+        # Primary domain HTTPS - pyrosec.is
+        server {
+            listen 443 ssl;
+            server_name pyrosec.is;
+
+            ssl_certificate /etc/ssl/certs/pyrosec.is/tls.crt;
+            ssl_certificate_key /etc/ssl/certs/pyrosec.is/tls.key;
+            ssl_protocols TLSv1.2 TLSv1.3;
+            ssl_ciphers HIGH:!aNULL:!MD5;
+
+            location /health {
+                access_log off;
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+
+            location /.well-known/matrix/client {
+                default_type application/json;
+                add_header Access-Control-Allow-Origin *;
+                return 200 '{"m.homeserver": {"base_url": "https://matrix.pyrosec.is"}}';
+            }
+
+            location /.well-known/matrix/server {
+                default_type application/json;
+                return 200 '{"m.server": "matrix.pyrosec.is:443"}';
+            }
+
+            location / {
+                proxy_pass http://ghostweb;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+                proxy_set_header X-Forwarded-Host $host;
+                proxy_set_header User-Agent $http_user_agent;
+
+                proxy_set_header CF-IPCountry $http_cf_ipcountry;
+                proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+
+                proxy_read_timeout 60s;
+                proxy_send_timeout 60s;
+            }
+        }
     }

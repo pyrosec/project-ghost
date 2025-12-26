@@ -38,6 +38,8 @@ spec:
           ports:
             - containerPort: 80
               name: http
+            - containerPort: 443
+              name: https
           envFrom:
             - configMapRef:
                 name: ghost-config
@@ -55,6 +57,9 @@ spec:
               mountPath: /var/www
             - name: certbot-www
               mountPath: /var/www/certbot
+            - name: tls-certs
+              mountPath: /etc/ssl/certs/pyrosec.is
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /health
@@ -77,6 +82,9 @@ spec:
           emptyDir: {}
         - name: certbot-www
           emptyDir: {}
+        - name: tls-certs
+          secret:
+            secretName: pyrosec-is-tls
 ---
 apiVersion: v1
 kind: Service
@@ -92,6 +100,9 @@ spec:
     - port: 80
       targetPort: 80
       name: http
+    - port: 443
+      targetPort: 443
+      name: https
   type: ClusterIP
 ---
 # Global Load Balancer via Ingress
