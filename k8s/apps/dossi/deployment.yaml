@@ -46,10 +46,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-          volumeMounts:
-            - name: asterisk-data
-              mountPath: /etc/asterisk
-              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -57,7 +53,3 @@ spec:
                 - node
             initialDelaySeconds: 30
             periodSeconds: 10
-      volumes:
-        - name: asterisk-data
-          persistentVolumeClaim:
-            claimName: asterisk-data

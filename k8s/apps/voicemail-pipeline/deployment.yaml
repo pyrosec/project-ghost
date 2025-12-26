@@ -35,13 +35,8 @@ spec:
               cpu: 500m
               memory: 512Mi
           volumeMounts:
-            - name: asterisk-data
-              mountPath: /etc/asterisk
-              readOnly: true
-            - name: asterisk-spool
-              mountPath: /var/spool/asterisk
-            - name: prosody-data
-              mountPath: /var/lib/prosody
+            - name: voicemail-data
+              mountPath: /var/spool/voicemail
             - name: gcloud-credentials
               mountPath: /gcloud
               readOnly: true
@@ -53,15 +48,8 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
-        - name: asterisk-data
-          persistentVolumeClaim:
-            claimName: asterisk-data
-        - name: asterisk-spool
-          persistentVolumeClaim:
-            claimName: asterisk-spool
-        - name: prosody-data
-          persistentVolumeClaim:
-            claimName: prosody-data
+        - name: voicemail-data
+          emptyDir: {}
         - name: gcloud-credentials
           secret:
             secretName: gcloud-credentials
