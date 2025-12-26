@@ -954,6 +954,7 @@ const printDossier = async (body, to) => {
 export async function run() {
   xmpp = client({
     service: process.env.XMPP_SERVICE || process.env.DOMAIN,
+    domain: process.env.DOMAIN,
     resource: "dossi",
     username: "dossi",
     password: process.env.ROOT_PASSWORD || "password",

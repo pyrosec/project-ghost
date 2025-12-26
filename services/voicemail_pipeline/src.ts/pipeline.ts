@@ -115,6 +115,7 @@ function cleanBox(extension) {
 export async function run() {
   const xmpp = client({
     service: process.env.XMPP_SERVICE || process.env.DOMAIN,
+    domain: process.env.DOMAIN,
     resource: 'voicemail',
     username: 'voicemail',
     password: process.env.ROOT_PASSWORD || 'password'
