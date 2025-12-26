@@ -1,28 +1,50 @@
-FROM debian:bookworm-slim
-WORKDIR /opt
-RUN apt-get update
-RUN apt-get install -y git gettext build-essential autoconf binutils automake bash sudo findutils less curl sngrep ngrep tcpdump libcap-dev libedit-dev libxml2-dev libsqlite3-dev libedit-dev libjansson-dev libssl-dev libxml2-dev patch uuid-dev iproute2
-RUN git clone https://github.com/asterisk/asterisk
-WORKDIR /opt/asterisk
-RUN git checkout 20.5.0
-RUN yes | ./contrib/scripts/install_prereq install
-RUN ./configure --without-dahdi --without-pri --without-gtk2 --without-radius --without-x11 --without-speex
-RUN make menuselect.makeopts
-RUN menuselect/menuselect \
-        --enable app_authenticate --enable app_cdr --enable app_celgenuserevent \
-        --enable app_channelredirect --enable app_chanisavail --enable app_chanspy \
-       --enable app_amd --enable app_mixmonitor --enable pbx_lua --enable res_srtp \
-       --enable chan_sip --enable res_agi --enable res_srtp --enable app_bridgewait --enable app_dial --enable app_playback --enable app_stack --enable app_verbose --enable app_voicemail --enable app_directory --enable app_confbridge --enable app_queue --enable app_playtones --enable app_disa --enable pbx_lua
-RUN make install
-RUN apt-get install -y luarocks lua5.2 liblua5.2-dev openssl cmake
-RUN luarocks install --lua-version 5.2 --tree /usr/local configh
-RUN luarocks install --lua-version 5.2 --tree /usr/local luasocket
-RUN luarocks install --lua-version 5.2 --tree /usr/local redis-lua
-RUN luarocks install --lua-version 5.2 --tree /usr/local luafilesystem
-RUN luarocks install --lua-version 5.2 --tree /usr/local rapidjson
+# Use pre-built asterisk image to avoid CPU instruction issues
+FROM mlan/asterisk:latest
+USER root
+
+# Install lua and dependencies (Alpine uses apk)
+# Note: mlan/asterisk uses Lua 5.1 for pbx_lua
+RUN apk add --no-cache \
+    gettext \
+    lua5.1 \
+    lua5.1-dev \
+    lua5.1-socket \
+    lua5.1-filesystem \
+    lua5.1-sec \
+    openssl \
+    openssl-dev \
+    cmake \
+    iproute2 \
+    sngrep \
+    ngrep \
+    tcpdump \
+    less \
+    git \
+    bash \
+    build-base \
+    wget \
+    rapidjson-dev
+
+# Install luarocks for Lua 5.1 and additional modules
+RUN wget -q https://luarocks.org/releases/luarocks-3.9.2.tar.gz && \
+    tar zxpf luarocks-3.9.2.tar.gz && \
+    cd luarocks-3.9.2 && \
+    ./configure --with-lua=/usr --with-lua-include=/usr/include && \
+    make && make install && \
+    cd .. && rm -rf luarocks-3.9.2*
+
+# Install lua modules
+RUN luarocks install luasocket 2>/dev/null || true
+RUN luarocks install luasec OPENSSL_DIR=/usr 2>/dev/null || true
+RUN luarocks install redis-lua 2>/dev/null || true
+RUN luarocks install rapidjson 2>/dev/null || true
+
+# Copy configuration files
 COPY ./templates /templates
 COPY ./config /config
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 COPY ./extensions.lua /config/extensions.lua
+RUN chmod +x /docker-entrypoint.sh
+
 WORKDIR /
 CMD ["bash", "/docker-entrypoint.sh"]

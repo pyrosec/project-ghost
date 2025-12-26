@@ -487,8 +487,11 @@ const createConsumer = async () => {
 };
 async function run() {
     await initializeDatabase();
-    createConsumer().catch((err) => logger_1.logger.error(err));
-    startPollingForMMS().catch((err) => logger_1.logger.error(err));
+    // Run both consumers in parallel and keep process alive
+    await Promise.all([
+        createConsumer().catch((err) => logger_1.logger.error(err)),
+        startPollingForMMS().catch((err) => logger_1.logger.error(err))
+    ]);
     //  await startSMPPServer(handleSms);
     //  await startSecureSMPPServer(handleSms);
 }

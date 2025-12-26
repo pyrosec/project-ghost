@@ -23,11 +23,11 @@ database:
   name: psycopg2
   txn_limit: 10000
   args:
-    user: matrix
-    password: password
-    database: matrix
-    host: postgres
-    port: 5432
+    user: $POSTGRES_USER
+    password: "$POSTGRES_PASSWORD"
+    database: $POSTGRES_DB
+    host: $POSTGRES_HOST
+    port: $POSTGRES_PORT
     cp_min: 5
     cp_max: 10
 log_config: "/data/$SYNAPSE_SERVER_NAME.log.config"

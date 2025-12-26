@@ -1,6 +1,6 @@
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTranscript = void 0;
+exports.getTranscript = getTranscript;
 const speech_1 = require("@google-cloud/speech");
 const speech = new speech_1.SpeechClient();
 const storage_1 = require("./storage");
@@ -54,6 +54,5 @@ async function getTranscript(parcel) {
     }
     return parcel;
 }
-exports.getTranscript = getTranscript;
 ;
 //# sourceMappingURL=transcript.js.map

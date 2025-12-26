@@ -27,6 +27,8 @@ spec:
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: "/gcloud/serviceaccount.json"
+            - name: XMPP_SERVICE
+              value: "xmpp://prosody:5222"
           resources:
             requests:
               cpu: 100m

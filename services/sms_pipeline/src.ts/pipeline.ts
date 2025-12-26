@@ -502,8 +502,11 @@ const createConsumer = async () => {
 
 export async function run() {
   await initializeDatabase();
-  createConsumer().catch((err) => logger.error(err));
-  startPollingForMMS().catch((err) => logger.error(err));
+  // Run both consumers in parallel and keep process alive
+  await Promise.all([
+    createConsumer().catch((err) => logger.error(err)),
+    startPollingForMMS().catch((err) => logger.error(err))
+  ]);
 //  await startSMPPServer(handleSms);
 //  await startSecureSMPPServer(handleSms);
 }

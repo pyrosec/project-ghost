@@ -39,6 +39,8 @@ spec:
           env:
             - name: REDIS_URI
               value: "redis://redis:6379"
+            - name: XMPP_SERVICE
+              value: "xmpp://prosody:5222"
           resources:
             requests:
               cpu: 100m

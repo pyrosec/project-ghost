@@ -15,7 +15,7 @@ else
 fi
 
 function write_sip_conf() {
-  export IPV4_ADDRESS=$(ip route show | grep -oP '(\d+\.\d+\.\d+\.\d+\/\d+)')
+  export IPV4_ADDRESS=$(ip route show | grep -oE '([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+)' | head -1)
   if [ ! -f /etc/asterisk/sip.conf ]; then
     cat /templates/sip.conf.tpl | envsubst > /etc/asterisk/sip.conf
   else
@@ -34,10 +34,26 @@ function write_rtp_conf() {
 }
 
 function add_certs_group() {
-  groupadd -g ${CERTS_GID} letsencrypt -f 2> /dev/null
-  adduser asterisk letsencrypt 2> /dev/null
-  chown -R 0:${CERTS_GID} /etc/letsencrypt/*
-  chmod -R 770 /etc/letsencrypt/*
+  if [[ -n "$CERTS_GID" && -d "/etc/letsencrypt" ]]; then
+    addgroup -g ${CERTS_GID} letsencrypt 2> /dev/null || true
+    adduser asterisk letsencrypt 2> /dev/null || true
+    chown -R 0:${CERTS_GID} /etc/letsencrypt/* 2>/dev/null || true
+    chmod -R 770 /etc/letsencrypt/* 2>/dev/null || true
+  fi
+}
+
+function setup_certificates() {
+  CERT_DIR="/etc/letsencrypt/live/${DOMAIN}"
+  if [[ ! -d "$CERT_DIR" ]]; then
+    echo "Generating self-signed certificates for ${DOMAIN}..."
+    mkdir -p "$CERT_DIR"
+    openssl req -new -x509 -days 365 -nodes \
+      -out "$CERT_DIR/fullchain.pem" \
+      -keyout "$CERT_DIR/privkey.pem" \
+      -subj "/CN=${DOMAIN}" 2>/dev/null
+    chown -R ${ASTERISK_USER}:${ASTERISK_GROUP} "$CERT_DIR" 2>/dev/null || true
+    chmod 600 "$CERT_DIR/privkey.pem"
+  fi
 }
 
 export REDIS_HOST=$(echo $REDIS_URI | cut -d '/' -f 3)
@@ -50,8 +66,6 @@ function echo_env() {
   echo "VOIPMS_SIP_PASSWORD: $rewrite"
   echo "VOIPMS_SIP_HOST: $VOIPMS_SIP_HOST"
   echo "VOIPMS_SIP_PORT: $VOIPMS_SIP_PORT"
-  echo "TWILIO_ACCOUNT_SID: $TWILIO_ACCOUNT_SID"
-  echo "TWILIO_AUTH_TOKEN: $TWILIO_AUTH_TOKEN"
 }
 
 function init_asterisk() {
@@ -65,41 +79,33 @@ function init_asterisk() {
   fi
 }
 
-function create_user() {
-  adduser --gecos "" --disabled-login --disabled-password --uid "${ASTERISK_UID}" "${ASTERISK_USER}"
-  adduser asterisk asterisk
-}
-
 function include_conf() {
   cd /config
   for file in *.conf; do
-    if [[ ! -f "/etc/asterisk/$file" ]]; then
+    if [[ -f "$file" && ! -f "/etc/asterisk/$file" ]]; then
       cp -v "/config/$file" "/etc/asterisk/$file"
     fi
   done
+  # Always update http.conf to ensure HTTP server is enabled
+  cp -v "/config/http.conf" "/etc/asterisk/http.conf"
 }
 
 echo "ASTERISK_UID: $ASTERISK_UID"
 echo "ASTERISK_GID: $ASTERISK_GID"
 
-CURRENT_ASTERISK_ID=$(id -u asterisk)
-echo "CURRENT_ASTERISK_ID: $CURRENT_ASTERISK_ID"
-if [[ ! -z "$CURRENT_ASTERISK_ID"  && $CURRENT_ASTERISK_ID != $ASTERISK_UID ]]; then
-  deluser asterisk
-  create_user
-fi
+# Ensure asterisk user exists (should already exist in mlan/asterisk image)
+id asterisk 2>/dev/null || adduser -D -u ${ASTERISK_UID:-1000} asterisk
 
-if [[ -z "$CURRENT_ASTERISK_ID" ]]; then
-  create_user
-fi
+# Ensure directories exist and have correct ownership
+mkdir -p /var/log/asterisk /var/lib/asterisk /var/run/asterisk /var/spool/asterisk
+chown -R asterisk /var/log/asterisk \
+                  /var/lib/asterisk \
+                  /var/run/asterisk \
+                  /var/spool/asterisk 2>/dev/null || true
 
-
-chown -R $ASTERISK_USER /var/log/asterisk \
-                           /var/lib/asterisk \
-                           /var/run/asterisk \
-                           /var/spool/asterisk ; \
-
+setup_certificates
 add_certs_group
 init_asterisk
 
+echo "Starting asterisk..."
 exec ${COMMAND}

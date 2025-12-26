@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.run = void 0;
+exports.run = run;
 const lodash_1 = __importDefault(require("lodash"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const debug_1 = __importDefault(require("@xmpp/debug"));
@@ -106,7 +106,7 @@ function cleanBox(extension) {
 ;
 async function run() {
     const xmpp = (0, client_1.client)({
-        service: process.env.DOMAIN,
+        service: process.env.XMPP_SERVICE || process.env.DOMAIN,
         resource: 'voicemail',
         username: 'voicemail',
         password: process.env.ROOT_PASSWORD || 'password'
@@ -125,5 +125,4 @@ async function run() {
         await new Promise((resolve) => setTimeout(resolve, 10000));
     }
 }
-exports.run = run;
 //# sourceMappingURL=pipeline.js.map

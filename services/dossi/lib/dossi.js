@@ -900,7 +900,7 @@ const printDossier = async (body, to) => {
 };
 async function run() {
     xmpp = (0, client_1.client)({
-        service: process.env.DOMAIN,
+        service: process.env.XMPP_SERVICE || process.env.DOMAIN,
         resource: "dossi",
         username: "dossi",
         password: process.env.ROOT_PASSWORD || "password",

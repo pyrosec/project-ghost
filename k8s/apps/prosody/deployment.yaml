@@ -54,6 +54,11 @@ spec:
           env:
             - name: REDIS_URI
               value: "redis://redis:6379"
+            - name: DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: PRIMARY_DOMAIN
           resources:
             requests:
               cpu: 200m
