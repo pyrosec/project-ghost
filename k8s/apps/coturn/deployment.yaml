@@ -155,8 +155,8 @@ spec:
             - name: config
               mountPath: /etc/turnserver.conf
               subPath: turnserver.conf
-            - name: certificates
-              mountPath: /etc/letsencrypt
+            - name: tls-certs
+              mountPath: /etc/letsencrypt/live/pyrosec.gg
               readOnly: true
           securityContext:
             capabilities:
@@ -173,9 +173,14 @@ spec:
         - name: config
           configMap:
             name: coturn-config
-        - name: certificates
-          persistentVolumeClaim:
-            claimName: certificates
+        - name: tls-certs
+          secret:
+            secretName: pyrosec-gg-tls
+            items:
+              - key: tls.crt
+                path: fullchain.pem
+              - key: tls.key
+                path: privkey.pem
 ---
 # ConfigMap for external IPs (populated by Terraform or manually)
 apiVersion: v1

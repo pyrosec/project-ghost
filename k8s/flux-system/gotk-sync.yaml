@@ -68,3 +68,20 @@ spec:
       name: openresty
       namespace: ghost
   timeout: 5m
+---
+# Sync cert-manager resources (issuers and certificates)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ghost-certs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: ghost-base
+  interval: 10m
+  path: ./k8s/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: project-ghost
+  timeout: 5m

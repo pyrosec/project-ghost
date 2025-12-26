@@ -1,0 +1,37 @@
+# Wildcard certificate for pyrosec.is
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pyrosec-is-wildcard
+  namespace: ghost
+spec:
+  secretName: pyrosec-is-tls
+  issuerRef:
+    name: letsencrypt-primary
+    kind: ClusterIssuer
+  commonName: "*.pyrosec.is"
+  dnsNames:
+    - "pyrosec.is"
+    - "*.pyrosec.is"
+  privateKey:
+    algorithm: RSA
+    size: 2048
+---
+# Certificate for pyrosec.gg (STUN/TURN)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pyrosec-gg-wildcard
+  namespace: ghost
+spec:
+  secretName: pyrosec-gg-tls
+  issuerRef:
+    name: letsencrypt-stun
+    kind: ClusterIssuer
+  commonName: "*.pyrosec.gg"
+  dnsNames:
+    - "pyrosec.gg"
+    - "*.pyrosec.gg"
+  privateKey:
+    algorithm: RSA
+    size: 2048

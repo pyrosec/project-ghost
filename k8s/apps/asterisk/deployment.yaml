@@ -66,6 +66,9 @@ spec:
               mountPath: /etc/asterisk
             - name: asterisk-spool
               mountPath: /var/spool/asterisk
+            - name: tls-certs
+              mountPath: /etc/letsencrypt/live/pyrosec.is
+              readOnly: true
           securityContext:
             capabilities:
               add:
@@ -88,6 +91,14 @@ spec:
         - name: asterisk-spool
           persistentVolumeClaim:
             claimName: asterisk-spool
+        - name: tls-certs
+          secret:
+            secretName: pyrosec-is-tls
+            items:
+              - key: tls.crt
+                path: fullchain.pem
+              - key: tls.key
+                path: privkey.pem
 ---
 # LoadBalancer for SIP TLS (TCP only)
 apiVersion: v1

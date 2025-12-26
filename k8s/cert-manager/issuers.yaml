@@ -1,0 +1,41 @@
+# ClusterIssuer for pyrosec.is domain
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-primary
+spec:
+  acme:
+    email: admin@pyrosec.is
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-primary-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-primary
+              key: api-token
+        selector:
+          dnsZones:
+            - "pyrosec.is"
+---
+# ClusterIssuer for pyrosec.gg domain (STUN/TURN)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-stun
+spec:
+  acme:
+    email: admin@pyrosec.gg
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-stun-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-stun
+              key: api-token
+        selector:
+          dnsZones:
+            - "pyrosec.gg"
