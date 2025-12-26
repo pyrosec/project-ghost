@@ -40,6 +40,18 @@ spec:
               name: http
             - containerPort: 443
               name: https
+            - containerPort: 1194
+              name: openvpn
+            - containerPort: 5222
+              name: xmpp-client
+            - containerPort: 5223
+              name: xmpp-tls
+            - containerPort: 5269
+              name: xmpp-s2s
+            - containerPort: 8880
+              name: tinyproxy
+            - containerPort: 35061
+              name: sip
           envFrom:
             - configMapRef:
                 name: ghost-config
@@ -86,6 +98,7 @@ spec:
           secret:
             secretName: pyrosec-is-tls
 ---
+# ClusterIP service for internal use and GKE Ingress
 apiVersion: v1
 kind: Service
 metadata:
@@ -105,7 +118,54 @@ spec:
       name: https
   type: ClusterIP
 ---
-# Global Load Balancer via Ingress
+# LoadBalancer service for pyrosec.is - all protocols
+apiVersion: v1
+kind: Service
+metadata:
+  name: openresty-lb
+  namespace: ghost
+  labels:
+    app: openresty
+spec:
+  type: LoadBalancer
+  selector:
+    app: openresty
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+    - port: 1194
+      targetPort: 1194
+      protocol: TCP
+      name: openvpn
+    - port: 5222
+      targetPort: 5222
+      protocol: TCP
+      name: xmpp-client
+    - port: 5223
+      targetPort: 5223
+      protocol: TCP
+      name: xmpp-tls
+    - port: 5269
+      targetPort: 5269
+      protocol: TCP
+      name: xmpp-s2s
+    - port: 8880
+      targetPort: 8880
+      protocol: TCP
+      name: tinyproxy
+    - port: 35061
+      targetPort: 35061
+      protocol: TCP
+      name: sip
+  externalTrafficPolicy: Cluster
+---
+# Global Load Balancer via Ingress (for matrix and vault subdomains)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -122,6 +182,16 @@ spec:
       port:
         number: 80
   rules:
+    - host: pyrosec.is
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openresty
+                port:
+                  number: 80
     - host: matrix.pyrosec.is
       http:
         paths:
@@ -143,7 +213,7 @@ spec:
                 port:
                   number: 80
 ---
-# GKE Managed Certificate (alternative to cert-manager)
+# GKE Managed Certificate
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
@@ -151,5 +221,6 @@ metadata:
   namespace: ghost
 spec:
   domains:
+    - pyrosec.is
     - matrix.pyrosec.is
     - vault.pyrosec.is

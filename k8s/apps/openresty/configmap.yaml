@@ -15,6 +15,81 @@ data:
         multi_accept on;
     }
 
+    # TCP Stream proxying for non-HTTP protocols
+    stream {
+        log_format tcp_proxy '$remote_addr [$time_local] '
+                             '$protocol $status $bytes_sent $bytes_received '
+                             '$session_time "$upstream_addr"';
+
+        access_log /var/log/nginx/tcp_access.log tcp_proxy;
+
+        # OpenVPN - pyrosec.is:1194
+        upstream openvpn_backend {
+            server openvpn:1194;
+        }
+        server {
+            listen 1194;
+            proxy_pass openvpn_backend;
+            proxy_timeout 600s;
+            proxy_connect_timeout 10s;
+        }
+
+        # Tinyproxy (HTTP CONNECT proxy) - pyrosec.is:8880
+        upstream tinyproxy_backend {
+            server openvpn:8880;
+        }
+        server {
+            listen 8880;
+            proxy_pass tinyproxy_backend;
+            proxy_timeout 600s;
+            proxy_connect_timeout 10s;
+        }
+
+        # XMPP Client - pyrosec.is:5222
+        upstream xmpp_client_backend {
+            server prosody:5222;
+        }
+        server {
+            listen 5222;
+            proxy_pass xmpp_client_backend;
+            proxy_timeout 300s;
+            proxy_connect_timeout 10s;
+        }
+
+        # XMPP Client TLS - pyrosec.is:5223
+        upstream xmpp_client_tls_backend {
+            server prosody:5223;
+        }
+        server {
+            listen 5223;
+            proxy_pass xmpp_client_tls_backend;
+            proxy_timeout 300s;
+            proxy_connect_timeout 10s;
+        }
+
+        # XMPP Server-to-Server - pyrosec.is:5269
+        upstream xmpp_s2s_backend {
+            server prosody:5269;
+        }
+        server {
+            listen 5269;
+            proxy_pass xmpp_s2s_backend;
+            proxy_timeout 300s;
+            proxy_connect_timeout 10s;
+        }
+
+        # Asterisk SIP - pyrosec.is:35061
+        upstream asterisk_sip_backend {
+            server asterisk:35061;
+        }
+        server {
+            listen 35061;
+            proxy_pass asterisk_sip_backend;
+            proxy_timeout 300s;
+            proxy_connect_timeout 10s;
+        }
+    }
+
     http {
         include /etc/nginx/mime.types;
         default_type application/octet-stream;
