@@ -64,9 +64,6 @@ spec:
           volumeMounts:
             - name: prosody-data
               mountPath: /var/lib/prosody
-            - name: certificates
-              mountPath: /etc/letsencrypt
-              readOnly: true
           livenessProbe:
             tcpSocket:
               port: 5222
@@ -81,9 +78,6 @@ spec:
         - name: prosody-data
           persistentVolumeClaim:
             claimName: prosody-data
-        - name: certificates
-          persistentVolumeClaim:
-            claimName: certificates
 ---
 apiVersion: v1
 kind: Service

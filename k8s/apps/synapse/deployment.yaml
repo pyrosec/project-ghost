@@ -45,6 +45,8 @@ spec:
                 configMapKeyRef:
                   name: ghost-config
                   key: MATRIX_SERVER_NAME
+            - name: SYNAPSE_DATA_DIR
+              value: "/data"
             - name: POSTGRES_HOST
               value: postgres
             - name: POSTGRES_PORT
@@ -74,9 +76,6 @@ spec:
           volumeMounts:
             - name: synapse-data
               mountPath: /data
-            - name: certificates
-              mountPath: /certs
-              readOnly: true
           livenessProbe:
             httpGet:
               path: /health
@@ -93,9 +92,6 @@ spec:
         - name: synapse-data
           persistentVolumeClaim:
             claimName: synapse-data
-        - name: certificates
-          persistentVolumeClaim:
-            claimName: certificates
 ---
 apiVersion: v1
 kind: Service

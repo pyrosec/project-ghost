@@ -61,9 +61,6 @@ spec:
               mountPath: /etc/asterisk
             - name: asterisk-spool
               mountPath: /var/spool/asterisk
-            - name: certificates
-              mountPath: /etc/letsencrypt
-              readOnly: true
           securityContext:
             capabilities:
               add:
@@ -86,9 +83,6 @@ spec:
         - name: asterisk-spool
           persistentVolumeClaim:
             claimName: asterisk-spool
-        - name: certificates
-          persistentVolumeClaim:
-            claimName: certificates
 ---
 # LoadBalancer for SIP TLS (TCP only)
 apiVersion: v1
