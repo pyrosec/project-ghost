@@ -111,16 +111,6 @@ spec:
       port:
         number: 80
   rules:
-    - host: pyrosec.is
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: openresty
-                port:
-                  number: 80
     - host: matrix.pyrosec.is
       http:
         paths:
@@ -150,6 +140,5 @@ metadata:
   namespace: ghost
 spec:
   domains:
-    - pyrosec.is
     - matrix.pyrosec.is
     - vault.pyrosec.is
