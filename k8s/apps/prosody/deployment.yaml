@@ -54,6 +54,8 @@ spec:
           env:
             - name: REDIS_URI
               value: "redis://redis:6379"
+            - name: REDIS_HOST
+              value: "redis:6379"
             - name: DOMAIN
               valueFrom:
                 configMapKeyRef:
