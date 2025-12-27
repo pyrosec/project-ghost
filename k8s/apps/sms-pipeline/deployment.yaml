@@ -64,8 +64,9 @@ spec:
           livenessProbe:
             exec:
               command:
-                - pgrep
-                - node
+                - sh
+                - -c
+                - "ps aux | grep -v grep | grep -q 'node bin/sms_pipeline'"
             initialDelaySeconds: 30
             periodSeconds: 10
       volumes:
