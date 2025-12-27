@@ -6,7 +6,7 @@ mod auth;
 mod commands;
 mod config;
 
-use commands::{extension, logs, token};
+use commands::{extension, logs, status, token};
 
 #[derive(Parser)]
 #[command(name = "ghost")]
@@ -53,6 +53,14 @@ enum Commands {
     /// Manage blacklist
     #[command(subcommand)]
     Blacklist(BlacklistCommands),
+
+    /// System status commands
+    #[command(subcommand)]
+    Status(StatusCommands),
+
+    /// Redis key operations
+    #[command(subcommand)]
+    Redis(RedisCommands),
 }
 
 #[derive(Subcommand)]
@@ -169,6 +177,28 @@ enum LogsCommands {
         follow: bool,
     },
 
+    /// View OpenVPN logs
+    Openvpn {
+        /// Number of lines to show
+        #[arg(short, long, default_value = "100")]
+        lines: u32,
+
+        /// Follow log output (stream)
+        #[arg(short, long)]
+        follow: bool,
+    },
+
+    /// View SMS Pipeline logs
+    SmsPipeline {
+        /// Number of lines to show
+        #[arg(short, long, default_value = "100")]
+        lines: u32,
+
+        /// Follow log output (stream)
+        #[arg(short, long)]
+        follow: bool,
+    },
+
     /// View logs for a specific service
     Service {
         /// Service name
@@ -210,6 +240,43 @@ enum BlacklistCommands {
         /// Extension (default: your own)
         #[arg(short, long)]
         extension: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum StatusCommands {
+    /// Show OpenVPN connected clients
+    Openvpn,
+
+    /// Show SMS pipeline processing status
+    SmsPipeline,
+
+    /// Set SMS pipeline last processed time
+    SetSmsTime {
+        /// Unix timestamp
+        time: i64,
+    },
+}
+
+#[derive(Subcommand)]
+enum RedisCommands {
+    /// Get a Redis key value
+    Get {
+        /// Key name
+        key: String,
+    },
+
+    /// Set a Redis key value
+    Set {
+        /// Key name
+        key: String,
+
+        /// Value to set
+        value: String,
+
+        /// TTL in seconds (optional)
+        #[arg(short, long)]
+        ttl: Option<i64>,
     },
 }
 
@@ -278,6 +345,12 @@ async fn main() -> Result<()> {
             LogsCommands::Prosody { lines, follow } => {
                 logs::stream(&api, "prosody", lines, follow).await?;
             }
+            LogsCommands::Openvpn { lines, follow } => {
+                logs::stream(&api, "openvpn", lines, follow).await?;
+            }
+            LogsCommands::SmsPipeline { lines, follow } => {
+                logs::stream(&api, "sms-pipeline", lines, follow).await?;
+            }
             LogsCommands::Service { name, lines, follow } => {
                 logs::stream(&api, &name, lines, follow).await?;
             }
@@ -291,6 +364,25 @@ async fn main() -> Result<()> {
             }
             BlacklistCommands::Remove { number, extension: ext } => {
                 extension::blacklist_remove(&api, ext, &number).await?;
+            }
+        },
+        Commands::Status(cmd) => match cmd {
+            StatusCommands::Openvpn => {
+                status::openvpn(&api).await?;
+            }
+            StatusCommands::SmsPipeline => {
+                status::sms_pipeline(&api).await?;
+            }
+            StatusCommands::SetSmsTime { time } => {
+                status::set_sms_time(&api, time).await?;
+            }
+        },
+        Commands::Redis(cmd) => match cmd {
+            RedisCommands::Get { key } => {
+                status::redis_get(&api, &key).await?;
+            }
+            RedisCommands::Set { key, value, ttl } => {
+                status::redis_set(&api, &key, &value, ttl).await?;
             }
         },
     }

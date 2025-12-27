@@ -277,6 +277,60 @@ router.get('/prosody', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/logs/openvpn - Get OpenVPN logs
+router.get('/openvpn', async (req: Request, res: Response) => {
+  try {
+    const { lines, follow, since } = req.query as LogQueryParams;
+    const numLines = parseInt(lines || '100', 10);
+    const shouldFollow = follow === 'true' || follow === '1';
+    const sinceSeconds = since ? parseInt(since, 10) : undefined;
+
+    if (k8sApi && k8sLog) {
+      await streamPodLogs(res, 'openvpn', {
+        lines: numLines,
+        follow: shouldFollow,
+        sinceSeconds,
+      });
+    } else {
+      // Local file fallback
+      const logPath = '/var/log/openvpn/openvpn.log';
+
+      if (shouldFollow) {
+        streamLocalLogs(res, logPath);
+      } else {
+        const logs = await readLocalLogs(logPath, numLines);
+        res.json({ logs });
+      }
+    }
+  } catch (error) {
+    logger.error('Get OpenVPN logs error', error);
+    res.status(500).json({ error: 'Internal server error' } as ErrorResponse);
+  }
+});
+
+// GET /api/logs/sms-pipeline - Get SMS Pipeline logs
+router.get('/sms-pipeline', async (req: Request, res: Response) => {
+  try {
+    const { lines, follow, since } = req.query as LogQueryParams;
+    const numLines = parseInt(lines || '100', 10);
+    const shouldFollow = follow === 'true' || follow === '1';
+    const sinceSeconds = since ? parseInt(since, 10) : undefined;
+
+    if (k8sApi && k8sLog) {
+      await streamPodLogs(res, 'sms-pipeline', {
+        lines: numLines,
+        follow: shouldFollow,
+        sinceSeconds,
+      });
+    } else {
+      res.json({ logs: ['sms-pipeline local logs not available'] });
+    }
+  } catch (error) {
+    logger.error('Get SMS Pipeline logs error', error);
+    res.status(500).json({ error: 'Internal server error' } as ErrorResponse);
+  }
+});
+
 // GET /api/ghost-api/logs - Get ghost-api logs (self)
 router.get('/ghost-api', async (req: Request, res: Response) => {
   try {

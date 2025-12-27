@@ -169,6 +169,55 @@ pub struct LogsResponse {
     pub service: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct OpenVPNClient {
+    pub common_name: String,
+    pub real_address: String,
+    pub bytes_received: u64,
+    pub bytes_sent: u64,
+    pub connected_since: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OpenVPNStatus {
+    pub updated: Option<String>,
+    pub clients: Vec<OpenVPNClient>,
+    pub routes: Option<Vec<serde_json::Value>>,
+    pub global_stats: Option<std::collections::HashMap<String, String>>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SmsPipelineStatus {
+    pub last_time: i64,
+    pub last_time_iso: Option<String>,
+    pub behind_seconds: Option<i64>,
+    pub behind_human: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SmsPipelineSetResponse {
+    pub success: bool,
+    pub last_time: i64,
+    pub last_time_iso: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RedisKeyResponse {
+    pub key: String,
+    pub value: Option<String>,
+    pub ttl: Option<i64>,
+    pub exists: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RedisSetResponse {
+    pub success: bool,
+    pub key: String,
+    pub value: String,
+    pub ttl: Option<i64>,
+}
+
 impl ApiClient {
     pub fn new(base_url: &str) -> Self {
         let client = Client::builder()
@@ -453,5 +502,72 @@ impl ApiClient {
         );
 
         self.request_with_auth(self.client.get(&url)).await
+    }
+
+    pub async fn get_openvpn_status(&self) -> Result<OpenVPNStatus> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .get(format!("{}/api/status/openvpn", self.base_url)),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn get_sms_pipeline_status(&self) -> Result<SmsPipelineStatus> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .get(format!("{}/api/status/sms-pipeline", self.base_url)),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn set_sms_pipeline_time(&self, time: i64) -> Result<SmsPipelineSetResponse> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .post(format!("{}/api/status/sms-pipeline", self.base_url))
+                    .json(&serde_json::json!({ "time": time })),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn get_redis_key(&self, key: &str) -> Result<RedisKeyResponse> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .get(format!("{}/api/status/redis/{}", self.base_url, key)),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn set_redis_key(
+        &self,
+        key: &str,
+        value: &str,
+        ttl: Option<i64>,
+    ) -> Result<RedisSetResponse> {
+        let mut body = serde_json::json!({ "value": value });
+        if let Some(t) = ttl {
+            body["ttl"] = serde_json::json!(t);
+        }
+
+        let response = self
+            .request_with_auth(
+                self.client
+                    .put(format!("{}/api/status/redis/{}", self.base_url, key))
+                    .json(&body),
+            )
+            .await?;
+
+        Self::handle_response(response).await
     }
 }
