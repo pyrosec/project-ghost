@@ -118,14 +118,16 @@ spec:
       name: https
   type: ClusterIP
 ---
-# LoadBalancer service for pyrosec.is - all protocols
+# Internal LoadBalancer for TCP proxy VM to connect to
 apiVersion: v1
 kind: Service
 metadata:
-  name: openresty-lb
+  name: openresty-internal
   namespace: ghost
   labels:
     app: openresty
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
 spec:
   type: LoadBalancer
   selector:
