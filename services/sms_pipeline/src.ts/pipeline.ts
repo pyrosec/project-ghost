@@ -521,6 +521,39 @@ const startStatusServer = () => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
+    } else if (req.url === '/set-last-time' && req.method === 'POST') {
+      try {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', async () => {
+          let newTime: number;
+          try {
+            const parsed = JSON.parse(body || '{}');
+            if (parsed.timestamp) {
+              newTime = Number(parsed.timestamp);
+            } else if (parsed.days_ago !== undefined) {
+              newTime = Math.floor(Date.now() / 1000) - (parsed.days_ago * 86400);
+            } else {
+              // Default: 2 days ago
+              newTime = Math.floor(Date.now() / 1000) - (2 * 86400);
+            }
+          } catch {
+            // Default: 2 days ago
+            newTime = Math.floor(Date.now() / 1000) - (2 * 86400);
+          }
+          await redis.set('last-time', String(newTime));
+          const response = JSON.stringify({
+            success: true,
+            last_time: newTime,
+            last_time_iso: new Date(newTime * 1000).toISOString()
+          }, null, 2);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(response);
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
     } else {
       res.writeHead(404);
       res.end();
