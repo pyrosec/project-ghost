@@ -15,8 +15,6 @@ spec:
       labels:
         app: openresty
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       initContainers:
         - name: copy-config
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openresty:latest
@@ -39,20 +37,28 @@ spec:
           command: ["nginx", "-g", "daemon off;"]
           ports:
             - containerPort: 80
+              hostPort: 80
               name: http
             - containerPort: 443
+              hostPort: 443
               name: https
             - containerPort: 1194
+              hostPort: 1194
               name: openvpn
             - containerPort: 5222
+              hostPort: 5222
               name: xmpp-client
             - containerPort: 5223
+              hostPort: 5223
               name: xmpp-tls
             - containerPort: 5269
+              hostPort: 5269
               name: xmpp-s2s
             - containerPort: 8880
+              hostPort: 8880
               name: tinyproxy
             - containerPort: 35061
+              hostPort: 35061
               name: sip
           envFrom:
             - configMapRef:
