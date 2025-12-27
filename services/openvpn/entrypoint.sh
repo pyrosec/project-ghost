@@ -15,5 +15,8 @@ iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
 iptables -A FORWARD -i tun0 -o eth0 -j ACCEPT
 iptables -A FORWARD -i eth0 -o tun0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 
+# Start status server in background
+python3 /usr/local/bin/status-server.py &
+
 # Start OpenVPN
 exec openvpn --config /etc/openvpn/server.conf

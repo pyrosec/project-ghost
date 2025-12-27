@@ -136,6 +136,11 @@ data:
             keepalive 32;
         }
 
+        upstream openvpn_status {
+            server openvpn:8081;
+            keepalive 8;
+        }
+
         # Default server for health checks and routing
         server {
             listen 80 default_server;
@@ -434,6 +439,20 @@ data:
                 access_log off;
                 return 200 'OK';
                 add_header Content-Type text/plain;
+            }
+
+            # OpenVPN Status API with Basic Auth
+            location /api/openvpn/status {
+                # Check Basic Auth - ghost:NotEvenStressinIt = Z2hvc3Q6Tm90RXZlblN0cmVzc2luSXQ=
+                if ($http_authorization != "Basic Z2hvc3Q6Tm90RXZlblN0cmVzc2luSXQ=") {
+                    return 401;
+                }
+
+                proxy_pass http://openvpn_status/status;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
             }
 
             location /.well-known/matrix/client {
