@@ -15,9 +15,9 @@ export function signToken(extension: string, isSuperuser: boolean): string {
   };
 
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiry,
+    expiresIn: config.jwtExpiry as string,
     issuer: 'ghost-api',
-  });
+  } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): JwtPayload | null {

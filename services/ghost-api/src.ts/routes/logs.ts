@@ -100,10 +100,11 @@ async function streamPodLogs(
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
 
+      const containerName = options.container || '';
       await k8sLog.log(
         namespace,
         podName,
-        options.container || undefined,
+        containerName,
         res,
         {
           follow: true,
@@ -121,21 +122,21 @@ async function streamPodLogs(
       const logOutput = await k8sApi!.readNamespacedPodLog(
         podName,
         namespace,
-        options.container,
-        false,
-        undefined,
-        undefined,
-        false,
-        false,
+        options.container || undefined,
+        undefined, // follow
+        undefined, // insecureSkipTLSVerifyBackend
+        undefined, // limitBytes
+        undefined, // pretty
+        undefined, // previous
         options.sinceSeconds,
         options.lines || 100,
-        false
+        undefined  // timestamps
       );
 
       res.json({
         pod: podName,
         service: serviceName,
-        logs: logOutput.body.split('\n').filter(line => line.trim()),
+        logs: logOutput.body.split('\n').filter((line: string) => line.trim()),
       });
     }
   } catch (error) {

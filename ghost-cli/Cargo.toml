@@ -15,7 +15,7 @@ path = "src/main.rs"
 clap = { version = "4.4", features = ["derive", "env"] }
 
 # HTTP client
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"], default-features = false }
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
@@ -24,8 +24,12 @@ tokio = { version = "1.35", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Secure credential storage
-keyring = "2.3"
+# Crypto for session encryption
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
+rand = "0.8"
+base64 = "0.21"
 
 # Terminal formatting
 colored = "2.1"
@@ -38,6 +42,7 @@ thiserror = "1.0"
 # Config file support
 dirs = "5.0"
 toml = "0.8"
+whoami = "1.5"
 
 # Date/time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -47,10 +52,6 @@ futures-util = "0.3"
 
 # Password input
 rpassword = "7.3"
-
-# Unix terminal control
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
 
 [profile.release]
 lto = true

@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { query, queryOne, logAudit } from '../db';
 import { signToken, verifyPassword, hashPassword, generateApiKey, getApiKeyPrefix } from '../auth';
 import { authMiddleware } from '../auth/middleware';
+import { getExtensionPasswordFromPjsip } from '../asterisk/config-writer';
+import { parsePjsipConf } from '../asterisk/config-parser';
 import { config } from '../config';
 import { logger } from '../logger';
 import {
@@ -34,27 +36,74 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Extension and password required' } as ErrorResponse);
     }
 
-    // Find user
-    const user = await queryOne<UserRow>(
+    // Find user in database
+    let user = await queryOne<UserRow>(
       'SELECT extension, password_hash, display_name, is_superuser, is_active FROM users WHERE extension = $1',
       [extension]
     );
 
-    if (!user) {
-      logger.warn('Login attempt for non-existent user', { extension });
-      return res.status(401).json({ error: 'Invalid credentials' } as ErrorResponse);
+    let isValid = false;
+    let bootstrapped = false;
+
+    if (user) {
+      // User exists in database
+      if (!user.is_active) {
+        logger.warn('Login attempt for disabled user', { extension });
+        return res.status(401).json({ error: 'Account is disabled' } as ErrorResponse);
+      }
+
+      // Verify password against database hash
+      isValid = await verifyPassword(password, user.password_hash);
+    } else {
+      // User not in database - check pjsip.conf for bootstrap
+      logger.info('User not in database, checking pjsip.conf for bootstrap', { extension });
+
+      try {
+        // Check if extension exists in pjsip.conf
+        const pjsipPassword = await getExtensionPasswordFromPjsip(extension);
+
+        if (pjsipPassword) {
+          // Extension exists in pjsip.conf - verify password directly
+          if (password === pjsipPassword) {
+            isValid = true;
+            bootstrapped = true;
+
+            // Get caller ID from pjsip.conf for display name
+            const pjsipData = await parsePjsipConf(config.pjsipConf);
+            const extData = pjsipData.extensions.get(extension);
+            const callerid = extData?.endpoint.callerid || extension;
+            const displayName = callerid.replace(/<[^>]+>/, '').trim();
+
+            // Create user in database with hashed password
+            const passwordHash = await hashPassword(password);
+            const isSuperuser = config.superuserExtensions.includes(extension);
+
+            await query(
+              `INSERT INTO users (extension, password_hash, display_name, is_superuser, is_active)
+               VALUES ($1, $2, $3, $4, TRUE)
+               ON CONFLICT (extension) DO UPDATE SET
+                 password_hash = EXCLUDED.password_hash,
+                 is_active = TRUE`,
+              [extension, passwordHash, displayName, isSuperuser]
+            );
+
+            logger.info('Bootstrapped user from pjsip.conf', { extension, displayName });
+
+            // Reload user from database
+            user = await queryOne<UserRow>(
+              'SELECT extension, password_hash, display_name, is_superuser, is_active FROM users WHERE extension = $1',
+              [extension]
+            );
+          }
+        }
+      } catch (pjsipError) {
+        logger.warn('Failed to check pjsip.conf for bootstrap', { extension, error: pjsipError });
+      }
     }
 
-    if (!user.is_active) {
-      logger.warn('Login attempt for disabled user', { extension });
-      return res.status(401).json({ error: 'Account is disabled' } as ErrorResponse);
-    }
-
-    // Verify password
-    const isValid = await verifyPassword(password, user.password_hash);
-    if (!isValid) {
-      logger.warn('Failed login attempt', { extension });
-      await logAudit('login_failed', extension, 'user', extension, {}, req.ip);
+    if (!isValid || !user) {
+      logger.warn('Failed login attempt', { extension, bootstrapped });
+      await logAudit('login_failed', extension, 'user', extension, { bootstrapped }, req.ip);
       return res.status(401).json({ error: 'Invalid credentials' } as ErrorResponse);
     }
 
@@ -65,7 +114,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = signToken(extension, isSuperuser);
     const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
 
-    await logAudit('login_success', extension, 'user', extension, {}, req.ip);
+    await logAudit('login_success', extension, 'user', extension, { bootstrapped }, req.ip);
 
     const response: LoginResponse = {
       token,
@@ -74,7 +123,7 @@ router.post('/login', async (req: Request, res: Response) => {
       expires_at: new Date(decoded.exp * 1000).toISOString(),
     };
 
-    logger.info('User logged in', { extension });
+    logger.info('User logged in', { extension, bootstrapped });
     res.json(response);
   } catch (error) {
     logger.error('Login error', error);

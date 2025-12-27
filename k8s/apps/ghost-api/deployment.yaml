@@ -14,6 +14,14 @@ spec:
         app: ghost-api
     spec:
       serviceAccountName: ghost-api
+      # Co-locate with asterisk to share ReadWriteOnce PVC
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: asterisk
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: ghost-api
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost/ghost-api:latest

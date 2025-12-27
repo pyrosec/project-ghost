@@ -1,6 +1,6 @@
 use anyhow::Result;
 use colored::Colorize;
-use tokio::io::AsyncBufReadExt;
+use futures_util::StreamExt;
 
 use crate::api::ApiClient;
 
@@ -23,12 +23,10 @@ pub async fn stream(api: &ApiClient, service: &str, lines: u32, follow: bool) ->
 
         // Read the streaming response
         let mut stream = response.bytes_stream();
-        use futures_util::StreamExt;
-
         let mut buffer = String::new();
 
-        while let Some(chunk) = stream.next().await {
-            match chunk {
+        while let Some(chunk_result) = stream.next().await {
+            match chunk_result {
                 Ok(bytes) => {
                     let text = String::from_utf8_lossy(&bytes);
                     buffer.push_str(&text);
@@ -38,10 +36,9 @@ pub async fn stream(api: &ApiClient, service: &str, lines: u32, follow: bool) ->
                         let line = buffer[..idx].trim();
 
                         // SSE format: "data: <content>"
-                        if line.starts_with("data: ") {
-                            let content = &line[6..];
+                        if let Some(content) = line.strip_prefix("data: ") {
                             println!("{}", content);
-                        } else if line.starts_with("event: error") {
+                        } else if let Some(_) = line.strip_prefix("event: error") {
                             // Error event
                             eprintln!("{}", line.red());
                         } else if !line.is_empty() && !line.starts_with(':') {

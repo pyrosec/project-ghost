@@ -23,7 +23,6 @@ RUN yarn install --production --frozen-lockfile || yarn install --production
 
 # Copy built files
 COPY --from=builder /app/lib ./lib
-COPY --from=builder /app/bin ./bin
 
 # Create non-root user
 RUN addgroup -g 1001 ghost && adduser -u 1001 -G ghost -s /bin/sh -D ghost

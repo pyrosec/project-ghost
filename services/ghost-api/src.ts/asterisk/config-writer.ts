@@ -228,8 +228,9 @@ export async function getExtensionPasswordFromPjsip(extension: string): Promise<
   const content = await fs.readFile(filePath, 'utf-8');
 
   // Find the auth section for this extension and extract password
+  // Note: pjsip.conf uses "password = value" with spaces around the equals sign
   const authPattern = new RegExp(
-    `\\[${extension}\\]\\([^)]*auth[^)]*\\)[\\s\\S]*?password=([^\\n]+)`,
+    `\\[${extension}\\]\\([^)]*auth[^)]*\\)[\\s\\S]*?password\\s*=\\s*([^\\n]+)`,
     'm'
   );
 
