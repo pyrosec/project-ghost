@@ -443,10 +443,8 @@ data:
 
             # OpenVPN Status API with Basic Auth
             location /api/openvpn/status {
-                # Check Basic Auth - ghost:NotEvenStressinIt = Z2hvc3Q6Tm90RXZlblN0cmVzc2luSXQ=
-                if ($http_authorization != "Basic Z2hvc3Q6Tm90RXZlblN0cmVzc2luSXQ=") {
-                    return 401;
-                }
+                auth_basic "API Access";
+                auth_basic_user_file /etc/nginx/auth/htpasswd;
 
                 proxy_pass http://openvpn_status/status;
                 proxy_set_header Host $host;

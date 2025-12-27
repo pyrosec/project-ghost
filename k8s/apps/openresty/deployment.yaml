@@ -72,6 +72,9 @@ spec:
             - name: tls-certs
               mountPath: /etc/ssl/certs/pyrosec.is
               readOnly: true
+            - name: api-auth
+              mountPath: /etc/nginx/auth
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /health
@@ -97,6 +100,9 @@ spec:
         - name: tls-certs
           secret:
             secretName: pyrosec-is-tls
+        - name: api-auth
+          secret:
+            secretName: api-auth
 ---
 # ClusterIP service for internal use and GKE Ingress
 apiVersion: v1
