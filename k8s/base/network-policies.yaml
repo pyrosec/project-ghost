@@ -25,6 +25,18 @@ spec:
           port: 80
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 1194
+        - protocol: TCP
+          port: 5222
+        - protocol: TCP
+          port: 5223
+        - protocol: TCP
+          port: 5269
+        - protocol: TCP
+          port: 8880
+        - protocol: TCP
+          port: 35061
   policyTypes:
     - Ingress
 ---
