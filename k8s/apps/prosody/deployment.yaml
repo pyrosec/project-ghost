@@ -70,7 +70,7 @@ spec:
               memory: 1Gi
           volumeMounts:
             - name: prosody-data
-              mountPath: /var/lib/prosody
+              mountPath: /usr/local/var/lib/prosody
             - name: tls-certs
               mountPath: /etc/letsencrypt/live/pyrosec.is
               readOnly: true
