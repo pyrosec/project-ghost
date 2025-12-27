@@ -41,6 +41,16 @@ spec:
               value: "redis://redis:6379"
             - name: SMS_SQLITE3_DATABASE
               value: "/data/sms.db"
+            - name: VOIPMS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: VOIPMS_API_USERNAME
+            - name: VOIPMS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: VOIPMS_API_PASSWORD
           resources:
             requests:
               cpu: 100m
