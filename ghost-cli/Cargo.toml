@@ -1,0 +1,58 @@
+[package]
+name = "ghost-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI tool for managing Ghost telephony system"
+authors = ["Ghost Team"]
+license = "MIT"
+
+[[bin]]
+name = "ghost"
+path = "src/main.rs"
+
+[dependencies]
+# CLI framework
+clap = { version = "4.4", features = ["derive", "env"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Secure credential storage
+keyring = "2.3"
+
+# Terminal formatting
+colored = "2.1"
+tabled = "0.15"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Config file support
+dirs = "5.0"
+toml = "0.8"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async streaming
+futures-util = "0.3"
+
+# Password input
+rpassword = "7.3"
+
+# Unix terminal control
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

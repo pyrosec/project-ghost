@@ -11,6 +11,8 @@ data:
   GHOST_NUMBER: "8008888080"
   LOG_LEVEL: "INFO"
   REDIS_URI: "redis://redis:6379"
+  # Ghost API settings
+  SUPERUSER_EXTENSIONS: "555"
 ---
 apiVersion: v1
 kind: ConfigMap

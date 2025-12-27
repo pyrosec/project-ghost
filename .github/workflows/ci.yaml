@@ -28,6 +28,8 @@ jobs:
       sms_pipeline: ${{ steps.changes.outputs.sms_pipeline }}
       voicemail_pipeline: ${{ steps.changes.outputs.voicemail_pipeline }}
       rtt_bridge: ${{ steps.changes.outputs.rtt_bridge }}
+      ghost_api: ${{ steps.changes.outputs.ghost_api }}
+      ghost_cli: ${{ steps.changes.outputs.ghost_cli }}
       nginx: ${{ steps.changes.outputs.nginx }}
       kubernetes: ${{ steps.changes.outputs.kubernetes }}
       terraform: ${{ steps.changes.outputs.terraform }}
@@ -51,6 +53,10 @@ jobs:
               - 'services/voicemail_pipeline/**'
             rtt_bridge:
               - 'services/rtt-bridge/**'
+            ghost_api:
+              - 'services/ghost-api/**'
+            ghost_cli:
+              - 'ghost-cli/**'
             nginx:
               - 'services/nginx/**'
             kubernetes:
@@ -283,3 +289,48 @@ jobs:
         run: |
           cd terraform
           terraform validate
+
+  build-ghost-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ghost_api == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./services/ghost-api
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/ghost-api:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}/ghost-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-ghost-cli:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ghost_cli == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ghost-cli
+      - name: Build ghost-cli
+        run: |
+          cd ghost-cli
+          cargo build --release
+      - name: Upload ghost-cli binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-cli-linux
+          path: ghost-cli/target/release/ghost

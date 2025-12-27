@@ -146,6 +146,11 @@ data:
             keepalive 8;
         }
 
+        upstream ghost_api {
+            server ghost-api:8080;
+            keepalive 32;
+        }
+
         # Default server for health checks and routing
         server {
             listen 80 default_server;
@@ -479,6 +484,54 @@ data:
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto https;
+            }
+
+            # Ghost API - JWT-authenticated endpoints
+            location /api/auth/ {
+                proxy_pass http://ghost_api/api/auth/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }
+
+            location /api/asterisk/ {
+                proxy_pass http://ghost_api/api/asterisk/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                # Support for log streaming (SSE)
+                proxy_buffering off;
+                proxy_cache off;
+                proxy_read_timeout 3600s;
+            }
+
+            location /api/prosody/ {
+                proxy_pass http://ghost_api/api/prosody/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                # Support for log streaming (SSE)
+                proxy_buffering off;
+                proxy_cache off;
+                proxy_read_timeout 3600s;
+            }
+
+            location /api/logs/ {
+                proxy_pass http://ghost_api/api/logs/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+
+                # Support for log streaming (SSE)
+                proxy_buffering off;
+                proxy_cache off;
+                proxy_read_timeout 3600s;
             }
 
             location /.well-known/matrix/client {

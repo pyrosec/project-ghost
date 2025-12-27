@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghost-api
+  namespace: ghost
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ghost-api
+  template:
+    metadata:
+      labels:
+        app: ghost-api
+    spec:
+      serviceAccountName: ghost-api
+      containers:
+        - name: ghost-api
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost/ghost-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: POSTGRES_URL
+            - name: REDIS_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: REDIS_URI
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: JWT_SECRET
+            - name: SUPERUSER_EXTENSIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: SUPERUSER_EXTENSIONS
+            - name: AMI_HOST
+              value: "asterisk"
+            - name: AMI_PORT
+              value: "5038"
+            - name: AMI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: AMI_USERNAME
+            - name: AMI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: AMI_PASSWORD
+            - name: ASTERISK_CONFIG_PATH
+              value: "/asterisk-config"
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: asterisk-config
+              mountPath: /asterisk-config
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: asterisk-config
+          persistentVolumeClaim:
+            claimName: asterisk-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost-api
+  namespace: ghost
+spec:
+  selector:
+    app: ghost-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ghost-api
+  namespace: ghost
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ghost-api-logs
+  namespace: ghost
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ghost-api-logs
+  namespace: ghost
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ghost-api-logs
+subjects:
+  - kind: ServiceAccount
+    name: ghost-api
+    namespace: ghost

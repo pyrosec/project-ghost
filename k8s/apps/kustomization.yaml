@@ -20,6 +20,9 @@ resources:
   - voicemail-pipeline
   - rtt-bridge
 
+  # API services
+  - ghost-api
+
   # Ingress and networking
   - openresty
   - coturn

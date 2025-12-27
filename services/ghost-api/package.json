@@ -1,0 +1,36 @@
+{
+  "name": "@ghostdial/ghost-api",
+  "version": "0.1.0",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node bin/ghost-api.js",
+    "build": "tsc",
+    "dev": "ts-node src.ts/index.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1",
+    "ioredis": "^5.3.2",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.0",
+    "winston": "^3.13.0",
+    "express-rate-limit": "^7.1.5",
+    "asterisk-manager": "^0.2.0",
+    "@kubernetes/client-node": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcrypt": "^5.0.2",
+    "@types/pg": "^8.10.9",
+    "@types/uuid": "^9.0.7",
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
