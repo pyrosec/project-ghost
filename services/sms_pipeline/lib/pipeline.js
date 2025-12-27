@@ -485,8 +485,41 @@ const createConsumer = async () => {
         await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 };
+const http = require('http');
+const startStatusServer = () => {
+    const server = http.createServer(async (req, res) => {
+        if (req.url === '/last-time' || req.url === '/') {
+            try {
+                const lastTime = await redis.get('last-time');
+                const lastTimeNum = Number(lastTime) || 0;
+                const response = JSON.stringify({
+                    last_time: lastTimeNum,
+                    last_time_iso: lastTimeNum ? new Date(lastTimeNum * 1000).toISOString() : null,
+                    current_time: Math.floor(Date.now() / 1000),
+                    current_time_iso: new Date().toISOString(),
+                    behind_seconds: lastTimeNum ? Math.floor(Date.now() / 1000) - lastTimeNum : null
+                }, null, 2);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(response);
+            }
+            catch (err) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err.message }));
+            }
+        }
+        else {
+            res.writeHead(404);
+            res.end();
+        }
+    });
+    server.listen(8080, '0.0.0.0', () => {
+        logger_1.logger.info('Status server listening on port 8080');
+    });
+    return server;
+};
 async function run() {
     await initializeDatabase();
+    startStatusServer();
     // Run both consumers in parallel and keep process alive
     await Promise.all([
         createConsumer().catch((err) => logger_1.logger.error(err)),

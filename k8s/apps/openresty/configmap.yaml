@@ -141,6 +141,11 @@ data:
             keepalive 8;
         }
 
+        upstream sms_pipeline_status {
+            server sms-pipeline:8080;
+            keepalive 8;
+        }
+
         # Default server for health checks and routing
         server {
             listen 80 default_server;
@@ -447,6 +452,18 @@ data:
                 auth_basic_user_file /etc/nginx/auth/htpasswd;
 
                 proxy_pass http://openvpn_status/status;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }
+
+            # SMS Pipeline Status API with Basic Auth
+            location /api/sms-pipeline/last-time {
+                auth_basic "API Access";
+                auth_basic_user_file /etc/nginx/auth/htpasswd;
+
+                proxy_pass http://sms_pipeline_status/last-time;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

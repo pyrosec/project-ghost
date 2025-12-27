@@ -31,6 +31,9 @@ spec:
       containers:
         - name: sms-pipeline
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/sms-pipeline:latest
+          ports:
+            - containerPort: 8080
+              name: status-api
           envFrom:
             - configMapRef:
                 name: ghost-config
@@ -73,3 +76,20 @@ spec:
         - name: sms-pipeline-data
           persistentVolumeClaim:
             claimName: sms-pipeline-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sms-pipeline
+  namespace: ghost
+  labels:
+    app: sms-pipeline
+spec:
+  type: ClusterIP
+  selector:
+    app: sms-pipeline
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: status-api
