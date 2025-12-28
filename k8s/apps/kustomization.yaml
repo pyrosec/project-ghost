@@ -19,6 +19,7 @@ resources:
   - sms-pipeline
   - voicemail-pipeline
   - rtt-bridge
+  - teleserver
 
   # API services
   - ghost-api

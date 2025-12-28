@@ -48,6 +48,11 @@ spec:
               name: xmpp-tls
             - containerPort: 5269
               name: xmpp-s2s
+            - containerPort: 8080
+              name: teleserver-tcp
+            - containerPort: 8081
+              name: teleserver-udp
+              protocol: UDP
             - containerPort: 8880
               name: tinyproxy
             - containerPort: 35061
@@ -164,6 +169,14 @@ spec:
       targetPort: 5269
       protocol: TCP
       name: xmpp-s2s
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: teleserver-tcp
+    - port: 8081
+      targetPort: 8081
+      protocol: UDP
+      name: teleserver-udp
     - port: 8880
       targetPort: 8880
       protocol: TCP

@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: teleserver-data
+  namespace: ghost
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard-rwo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teleserver
+  namespace: ghost
+  labels:
+    app: teleserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teleserver
+  template:
+    metadata:
+      labels:
+        app: teleserver
+    spec:
+      containers:
+        - name: teleserver
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/teleserver:latest
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 8081
+              name: udp
+              protocol: UDP
+          volumeMounts:
+            - name: teleserver-data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: teleserver-data
+          persistentVolumeClaim:
+            claimName: teleserver-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: teleserver
+  namespace: ghost
+spec:
+  selector:
+    app: teleserver
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+      protocol: TCP
+    - port: 8081
+      targetPort: 8081
+      name: udp
+      protocol: UDP
+  type: ClusterIP
