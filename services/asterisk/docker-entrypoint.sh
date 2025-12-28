@@ -33,6 +33,21 @@ function write_rtp_conf() {
   fi
 }
 
+function write_pjsip_conf() {
+  # Update transport settings in pjsip.conf
+  # This preserves user endpoints while updating external addresses
+  if [ ! -f /etc/asterisk/pjsip.conf ]; then
+    # First time: generate from template
+    cat /templates/pjsip.conf.tpl | envsubst > /etc/asterisk/pjsip.conf
+  else
+    # Update existing: fix external addresses and remove local_net
+    sed -i "s/^external_signaling_address = .*/external_signaling_address = ${EXTERNAL_SIGNALING_IP}/" /etc/asterisk/pjsip.conf
+    sed -i "s/^external_media_address = .*/external_media_address = ${EXTERNAL_MEDIA_IP}/" /etc/asterisk/pjsip.conf
+    # Remove local_net lines (causes issues with proxy)
+    sed -i '/^local_net = /d' /etc/asterisk/pjsip.conf
+  fi
+}
+
 function add_certs_group() {
   if [[ -n "$CERTS_GID" && -d "/etc/letsencrypt" ]]; then
     addgroup -g ${CERTS_GID} letsencrypt 2> /dev/null || true
@@ -73,10 +88,10 @@ function init_asterisk() {
   echo "INITIALIZING GHOSTDIAL/ASTERISK..."
   write_sip_conf
   write_rtp_conf
+  write_pjsip_conf
   include_conf
-  if [[ ! -f /etc/asterisk/extensions.lua ]]; then
-    cp /config/extensions.lua /etc/asterisk/extensions.lua
-  fi
+  # Always copy extensions.lua from image to ensure consistency
+  cp /config/extensions.lua /etc/asterisk/extensions.lua
 }
 
 function include_conf() {

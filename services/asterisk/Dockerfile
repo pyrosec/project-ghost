@@ -37,7 +37,8 @@ RUN wget -q https://luarocks.org/releases/luarocks-3.9.2.tar.gz && \
 RUN luarocks install luasocket 2>/dev/null || true
 RUN luarocks install luasec OPENSSL_DIR=/usr 2>/dev/null || true
 RUN luarocks install redis-lua 2>/dev/null || true
-RUN luarocks install rapidjson 2>/dev/null || true
+# Use lua-cjson instead of rapidjson (rapidjson causes SIGILL on some CPUs)
+RUN luarocks install lua-cjson 2>/dev/null || true
 
 # Copy configuration files
 COPY ./templates /templates
@@ -47,4 +48,6 @@ COPY ./extensions.lua /config/extensions.lua
 RUN chmod +x /docker-entrypoint.sh
 
 WORKDIR /
-CMD ["bash", "/docker-entrypoint.sh"]
+# Override base image entrypoint to run our entrypoint directly
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD []

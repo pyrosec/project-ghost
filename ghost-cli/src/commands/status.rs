@@ -7,10 +7,23 @@ pub async fn openvpn(api: &ApiClient) -> Result<()> {
     let status = api.get_openvpn_status().await?;
 
     println!("{}", "OpenVPN Status".cyan().bold());
-    println!("{}", "=".repeat(60));
+    println!("{}", "=".repeat(80));
 
     if let Some(updated) = &status.updated {
         println!("Updated: {}", updated.dimmed());
+    }
+
+    // Build a map of common_name -> virtual_address from routes
+    let mut vpn_ips: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    if let Some(routes) = &status.routes {
+        for route in routes {
+            if let (Some(cn), Some(vaddr)) = (
+                route.get("common_name").and_then(|v| v.as_str()),
+                route.get("virtual_address").and_then(|v| v.as_str()),
+            ) {
+                vpn_ips.insert(cn.to_string(), vaddr.to_string());
+            }
+        }
     }
 
     println!("\n{}", "Connected Clients:".green().bold());
@@ -18,16 +31,21 @@ pub async fn openvpn(api: &ApiClient) -> Result<()> {
         println!("  {}", "No clients connected".dimmed());
     } else {
         println!(
-            "  {:<20} {:<22} {:>12} {:>12}",
+            "  {:<20} {:<16} {:<22} {:>10} {:>10}",
             "Name".bold(),
-            "Address".bold(),
+            "VPN IP".bold(),
+            "Real Address".bold(),
             "Received".bold(),
             "Sent".bold()
         );
         for client in &status.clients {
+            let vpn_ip = vpn_ips.get(&client.common_name)
+                .map(|s| s.as_str())
+                .unwrap_or("-");
             println!(
-                "  {:<20} {:<22} {:>12} {:>12}",
+                "  {:<20} {:<16} {:<22} {:>10} {:>10}",
                 client.common_name,
+                vpn_ip,
                 client.real_address,
                 format_bytes(client.bytes_received),
                 format_bytes(client.bytes_sent),

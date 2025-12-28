@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: coturn-config
+  name: coturn-turnserver-config
   namespace: ghost
 data:
   turnserver.conf: |
@@ -172,7 +172,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: coturn-config
+            name: coturn-turnserver-config
         - name: tls-certs
           secret:
             secretName: pyrosec-gg-tls

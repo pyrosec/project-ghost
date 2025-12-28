@@ -1,3 +1,4 @@
+*/target/*
 node_modules
 .yarn
 .yarnrc
@@ -7,3 +8,4 @@ dossi-matrix.json
 .env
 *.swp
 *.swo
+services/ghost-api/lib/

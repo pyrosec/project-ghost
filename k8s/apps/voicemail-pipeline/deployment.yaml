@@ -37,21 +37,33 @@ spec:
               cpu: 500m
               memory: 512Mi
           volumeMounts:
-            - name: voicemail-data
-              mountPath: /var/spool/voicemail
+            - name: asterisk-spool
+              mountPath: /var/spool/asterisk
             - name: gcloud-credentials
               mountPath: /gcloud
               readOnly: true
           livenessProbe:
             exec:
               command:
-                - pgrep
-                - node
+                - sh
+                - -c
+                - "ps aux | grep -v grep | grep node || exit 1"
             initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+      # Pod affinity to ensure we're on same node as asterisk (for RWO PVC)
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: asterisk
+              topologyKey: kubernetes.io/hostname
       volumes:
-        - name: voicemail-data
-          emptyDir: {}
+        - name: asterisk-spool
+          persistentVolumeClaim:
+            claimName: asterisk-spool
         - name: gcloud-credentials
           secret:
             secretName: gcloud-credentials

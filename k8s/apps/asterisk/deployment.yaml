@@ -49,11 +49,23 @@ spec:
           env:
             - name: REDIS_URI
               value: "redis://redis:6379"
+            - name: REDIS_HOST
+              value: "redis:6379"
             - name: DOMAIN
               valueFrom:
                 configMapKeyRef:
                   name: ghost-config
                   key: PRIMARY_DOMAIN
+            - name: EXTERNAL_SIGNALING_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: EXTERNAL_SIGNALING_IP
+            - name: EXTERNAL_MEDIA_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: EXTERNAL_MEDIA_IP
           resources:
             requests:
               cpu: 500m
@@ -77,13 +89,14 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 8088
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 8088
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
       volumes:
         - name: asterisk-data
           persistentVolumeClaim:
@@ -101,7 +114,7 @@ spec:
                 path: privkey.pem
 ---
 # LoadBalancer for RTP media (UDP only)
-# Note: For production, consider using NodePort or hostNetwork for RTP
+# Ports 30000-30099 for Asterisk RTP traffic
 apiVersion: v1
 kind: Service
 metadata:
@@ -113,26 +126,407 @@ spec:
   selector:
     app: asterisk
   type: LoadBalancer
+  externalTrafficPolicy: Cluster
   ports:
     - port: 30000
       targetPort: 30000
-      name: rtp-0
+      name: rtp-00
       protocol: UDP
     - port: 30001
       targetPort: 30001
-      name: rtp-1
+      name: rtp-01
       protocol: UDP
     - port: 30002
       targetPort: 30002
-      name: rtp-2
+      name: rtp-02
       protocol: UDP
     - port: 30003
       targetPort: 30003
-      name: rtp-3
+      name: rtp-03
       protocol: UDP
     - port: 30004
       targetPort: 30004
-      name: rtp-4
+      name: rtp-04
+      protocol: UDP
+    - port: 30005
+      targetPort: 30005
+      name: rtp-05
+      protocol: UDP
+    - port: 30006
+      targetPort: 30006
+      name: rtp-06
+      protocol: UDP
+    - port: 30007
+      targetPort: 30007
+      name: rtp-07
+      protocol: UDP
+    - port: 30008
+      targetPort: 30008
+      name: rtp-08
+      protocol: UDP
+    - port: 30009
+      targetPort: 30009
+      name: rtp-09
+      protocol: UDP
+    - port: 30010
+      targetPort: 30010
+      name: rtp-10
+      protocol: UDP
+    - port: 30011
+      targetPort: 30011
+      name: rtp-11
+      protocol: UDP
+    - port: 30012
+      targetPort: 30012
+      name: rtp-12
+      protocol: UDP
+    - port: 30013
+      targetPort: 30013
+      name: rtp-13
+      protocol: UDP
+    - port: 30014
+      targetPort: 30014
+      name: rtp-14
+      protocol: UDP
+    - port: 30015
+      targetPort: 30015
+      name: rtp-15
+      protocol: UDP
+    - port: 30016
+      targetPort: 30016
+      name: rtp-16
+      protocol: UDP
+    - port: 30017
+      targetPort: 30017
+      name: rtp-17
+      protocol: UDP
+    - port: 30018
+      targetPort: 30018
+      name: rtp-18
+      protocol: UDP
+    - port: 30019
+      targetPort: 30019
+      name: rtp-19
+      protocol: UDP
+    - port: 30020
+      targetPort: 30020
+      name: rtp-20
+      protocol: UDP
+    - port: 30021
+      targetPort: 30021
+      name: rtp-21
+      protocol: UDP
+    - port: 30022
+      targetPort: 30022
+      name: rtp-22
+      protocol: UDP
+    - port: 30023
+      targetPort: 30023
+      name: rtp-23
+      protocol: UDP
+    - port: 30024
+      targetPort: 30024
+      name: rtp-24
+      protocol: UDP
+    - port: 30025
+      targetPort: 30025
+      name: rtp-25
+      protocol: UDP
+    - port: 30026
+      targetPort: 30026
+      name: rtp-26
+      protocol: UDP
+    - port: 30027
+      targetPort: 30027
+      name: rtp-27
+      protocol: UDP
+    - port: 30028
+      targetPort: 30028
+      name: rtp-28
+      protocol: UDP
+    - port: 30029
+      targetPort: 30029
+      name: rtp-29
+      protocol: UDP
+    - port: 30030
+      targetPort: 30030
+      name: rtp-30
+      protocol: UDP
+    - port: 30031
+      targetPort: 30031
+      name: rtp-31
+      protocol: UDP
+    - port: 30032
+      targetPort: 30032
+      name: rtp-32
+      protocol: UDP
+    - port: 30033
+      targetPort: 30033
+      name: rtp-33
+      protocol: UDP
+    - port: 30034
+      targetPort: 30034
+      name: rtp-34
+      protocol: UDP
+    - port: 30035
+      targetPort: 30035
+      name: rtp-35
+      protocol: UDP
+    - port: 30036
+      targetPort: 30036
+      name: rtp-36
+      protocol: UDP
+    - port: 30037
+      targetPort: 30037
+      name: rtp-37
+      protocol: UDP
+    - port: 30038
+      targetPort: 30038
+      name: rtp-38
+      protocol: UDP
+    - port: 30039
+      targetPort: 30039
+      name: rtp-39
+      protocol: UDP
+    - port: 30040
+      targetPort: 30040
+      name: rtp-40
+      protocol: UDP
+    - port: 30041
+      targetPort: 30041
+      name: rtp-41
+      protocol: UDP
+    - port: 30042
+      targetPort: 30042
+      name: rtp-42
+      protocol: UDP
+    - port: 30043
+      targetPort: 30043
+      name: rtp-43
+      protocol: UDP
+    - port: 30044
+      targetPort: 30044
+      name: rtp-44
+      protocol: UDP
+    - port: 30045
+      targetPort: 30045
+      name: rtp-45
+      protocol: UDP
+    - port: 30046
+      targetPort: 30046
+      name: rtp-46
+      protocol: UDP
+    - port: 30047
+      targetPort: 30047
+      name: rtp-47
+      protocol: UDP
+    - port: 30048
+      targetPort: 30048
+      name: rtp-48
+      protocol: UDP
+    - port: 30049
+      targetPort: 30049
+      name: rtp-49
+      protocol: UDP
+    - port: 30050
+      targetPort: 30050
+      name: rtp-50
+      protocol: UDP
+    - port: 30051
+      targetPort: 30051
+      name: rtp-51
+      protocol: UDP
+    - port: 30052
+      targetPort: 30052
+      name: rtp-52
+      protocol: UDP
+    - port: 30053
+      targetPort: 30053
+      name: rtp-53
+      protocol: UDP
+    - port: 30054
+      targetPort: 30054
+      name: rtp-54
+      protocol: UDP
+    - port: 30055
+      targetPort: 30055
+      name: rtp-55
+      protocol: UDP
+    - port: 30056
+      targetPort: 30056
+      name: rtp-56
+      protocol: UDP
+    - port: 30057
+      targetPort: 30057
+      name: rtp-57
+      protocol: UDP
+    - port: 30058
+      targetPort: 30058
+      name: rtp-58
+      protocol: UDP
+    - port: 30059
+      targetPort: 30059
+      name: rtp-59
+      protocol: UDP
+    - port: 30060
+      targetPort: 30060
+      name: rtp-60
+      protocol: UDP
+    - port: 30061
+      targetPort: 30061
+      name: rtp-61
+      protocol: UDP
+    - port: 30062
+      targetPort: 30062
+      name: rtp-62
+      protocol: UDP
+    - port: 30063
+      targetPort: 30063
+      name: rtp-63
+      protocol: UDP
+    - port: 30064
+      targetPort: 30064
+      name: rtp-64
+      protocol: UDP
+    - port: 30065
+      targetPort: 30065
+      name: rtp-65
+      protocol: UDP
+    - port: 30066
+      targetPort: 30066
+      name: rtp-66
+      protocol: UDP
+    - port: 30067
+      targetPort: 30067
+      name: rtp-67
+      protocol: UDP
+    - port: 30068
+      targetPort: 30068
+      name: rtp-68
+      protocol: UDP
+    - port: 30069
+      targetPort: 30069
+      name: rtp-69
+      protocol: UDP
+    - port: 30070
+      targetPort: 30070
+      name: rtp-70
+      protocol: UDP
+    - port: 30071
+      targetPort: 30071
+      name: rtp-71
+      protocol: UDP
+    - port: 30072
+      targetPort: 30072
+      name: rtp-72
+      protocol: UDP
+    - port: 30073
+      targetPort: 30073
+      name: rtp-73
+      protocol: UDP
+    - port: 30074
+      targetPort: 30074
+      name: rtp-74
+      protocol: UDP
+    - port: 30075
+      targetPort: 30075
+      name: rtp-75
+      protocol: UDP
+    - port: 30076
+      targetPort: 30076
+      name: rtp-76
+      protocol: UDP
+    - port: 30077
+      targetPort: 30077
+      name: rtp-77
+      protocol: UDP
+    - port: 30078
+      targetPort: 30078
+      name: rtp-78
+      protocol: UDP
+    - port: 30079
+      targetPort: 30079
+      name: rtp-79
+      protocol: UDP
+    - port: 30080
+      targetPort: 30080
+      name: rtp-80
+      protocol: UDP
+    - port: 30081
+      targetPort: 30081
+      name: rtp-81
+      protocol: UDP
+    - port: 30082
+      targetPort: 30082
+      name: rtp-82
+      protocol: UDP
+    - port: 30083
+      targetPort: 30083
+      name: rtp-83
+      protocol: UDP
+    - port: 30084
+      targetPort: 30084
+      name: rtp-84
+      protocol: UDP
+    - port: 30085
+      targetPort: 30085
+      name: rtp-85
+      protocol: UDP
+    - port: 30086
+      targetPort: 30086
+      name: rtp-86
+      protocol: UDP
+    - port: 30087
+      targetPort: 30087
+      name: rtp-87
+      protocol: UDP
+    - port: 30088
+      targetPort: 30088
+      name: rtp-88
+      protocol: UDP
+    - port: 30089
+      targetPort: 30089
+      name: rtp-89
+      protocol: UDP
+    - port: 30090
+      targetPort: 30090
+      name: rtp-90
+      protocol: UDP
+    - port: 30091
+      targetPort: 30091
+      name: rtp-91
+      protocol: UDP
+    - port: 30092
+      targetPort: 30092
+      name: rtp-92
+      protocol: UDP
+    - port: 30093
+      targetPort: 30093
+      name: rtp-93
+      protocol: UDP
+    - port: 30094
+      targetPort: 30094
+      name: rtp-94
+      protocol: UDP
+    - port: 30095
+      targetPort: 30095
+      name: rtp-95
+      protocol: UDP
+    - port: 30096
+      targetPort: 30096
+      name: rtp-96
+      protocol: UDP
+    - port: 30097
+      targetPort: 30097
+      name: rtp-97
+      protocol: UDP
+    - port: 30098
+      targetPort: 30098
+      name: rtp-98
+      protocol: UDP
+    - port: 30099
+      targetPort: 30099
+      name: rtp-99
       protocol: UDP
 ---
 apiVersion: v1

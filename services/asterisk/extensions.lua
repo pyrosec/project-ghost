@@ -2,7 +2,7 @@ extensions = {}
 
 require 'socket';
 local https = require 'ssl.https';
-local json = require 'rapidjson';
+local json = require 'cjson';
 local ltn12 = require 'ltn12';
 local redis = require 'redis';
 
@@ -366,8 +366,8 @@ function ring_group(to)
   local withsip = {};
   table.insert(devices, to);
   for _, device in ipairs(devices) do
-    table.insert(withsip, 'SIP/' .. device);
-    print('SIP/' .. device);
+    table.insert(withsip, 'PJSIP/' .. device);
+    print('PJSIP/' .. device);
   end
   return table.concat(withsip, '&');
 end
