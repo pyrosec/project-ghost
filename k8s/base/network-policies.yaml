@@ -109,16 +109,11 @@ spec:
       ports:
         - protocol: TCP
           port: 35061
+        - protocol: TCP
+          port: 8088
         - protocol: UDP
           port: 30000
-        - protocol: UDP
-          port: 30001
-        - protocol: UDP
-          port: 30002
-        - protocol: UDP
-          port: 30003
-        - protocol: UDP
-          port: 30004
+          endPort: 30099
   policyTypes:
     - Ingress
 ---
@@ -142,6 +137,10 @@ spec:
           port: 5349
         - protocol: UDP
           port: 5349
+        # TURN relay port range
+        - protocol: UDP
+          port: 49152
+          endPort: 65535
   policyTypes:
     - Ingress
 ---
