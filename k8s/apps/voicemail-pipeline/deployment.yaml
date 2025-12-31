@@ -31,11 +31,11 @@ spec:
               value: "xmpp://prosody:5222"
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 25m
+              memory: 32Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: 125m
+              memory: 32Mi
           volumeMounts:
             - name: asterisk-spool
               mountPath: /var/spool/asterisk

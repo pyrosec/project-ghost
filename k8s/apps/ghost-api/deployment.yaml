@@ -75,11 +75,11 @@ spec:
               mountPath: /asterisk-config
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "32Mi"
+              cpu: "25m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "32Mi"
+              cpu: "125m"
           livenessProbe:
             httpGet:
               path: /health

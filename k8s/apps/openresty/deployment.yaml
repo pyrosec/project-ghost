@@ -6,7 +6,7 @@ metadata:
   labels:
     app: openresty
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: openresty
@@ -62,8 +62,8 @@ spec:
                 name: ghost-config
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
               cpu: 1000m
               memory: 512Mi

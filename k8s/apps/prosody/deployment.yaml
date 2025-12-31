@@ -63,11 +63,11 @@ spec:
                   key: PRIMARY_DOMAIN
           resources:
             requests:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 25m
+              memory: 32Mi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 32Mi
           volumeMounts:
             - name: prosody-data
               mountPath: /usr/local/var/lib/prosody

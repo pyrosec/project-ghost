@@ -47,11 +47,11 @@ spec:
                   key: LOG_LEVEL
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 25m
+              memory: 32Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: 125m
+              memory: 32Mi
           livenessProbe:
             httpGet:
               path: /health

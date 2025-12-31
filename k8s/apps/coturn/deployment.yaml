@@ -146,11 +146,11 @@ spec:
               name: turns-alt-udp
           resources:
             requests:
-              cpu: 250m
-              memory: 256Mi
+              cpu: 125m
+              memory: 32Mi
             limits:
               cpu: 2000m
-              memory: 1Gi
+              memory: 32Mi
           volumeMounts:
             - name: config
               mountPath: /etc/turnserver.conf
