@@ -44,4 +44,8 @@ export const config = {
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
+
+  // OpenVPN CA
+  caEncryptionKey: process.env.CA_ENCRYPTION_KEY || '',
+  openvpnPkiPath: process.env.OPENVPN_PKI_PATH || '/openvpn-pki',
 };

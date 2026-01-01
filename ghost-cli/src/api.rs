@@ -218,6 +218,23 @@ pub struct RedisSetResponse {
     pub ttl: Option<i64>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct IssueCertRequest {
+    pub username: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IssueCertResponse {
+    pub username: String,
+    pub ovpn_config: String,
+    pub expires_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListCertsResponse {
+    pub certificates: Vec<String>,
+}
+
 impl ApiClient {
     pub fn new(base_url: &str) -> Self {
         let client = Client::builder()
@@ -569,5 +586,49 @@ impl ApiClient {
             .await?;
 
         Self::handle_response(response).await
+    }
+
+    pub async fn issue_cert(&self, username: &str) -> Result<IssueCertResponse> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .post(format!("{}/api/openvpn/issue-cert", self.base_url))
+                    .json(&IssueCertRequest {
+                        username: username.to_string(),
+                    }),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn list_certs(&self) -> Result<ListCertsResponse> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .get(format!("{}/api/openvpn/certs", self.base_url)),
+            )
+            .await?;
+
+        Self::handle_response(response).await
+    }
+
+    pub async fn revoke_cert(&self, username: &str) -> Result<()> {
+        let response = self
+            .request_with_auth(
+                self.client
+                    .delete(format!("{}/api/openvpn/certs/{}", self.base_url, username)),
+            )
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let error: ErrorResponse = response.json().await.unwrap_or(ErrorResponse {
+                error: "Unknown error".to_string(),
+                details: None,
+            });
+            anyhow::bail!("{}", error.error)
+        }
     }
 }

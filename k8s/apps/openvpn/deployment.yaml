@@ -15,6 +15,45 @@ spec:
       labels:
         app: openvpn
     spec:
+      # Init container to set up PKI from secret if not already initialized
+      initContainers:
+      - name: init-pki
+        image: alpine:3.19
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Check if PKI is already initialized
+          if [ -f /pki/ca.crt ]; then
+            echo "PKI already initialized, skipping"
+            exit 0
+          fi
+
+          echo "Initializing PKI from secret..."
+
+          # Create directory structure
+          mkdir -p /pki/private /pki/issued /pki/reqs
+
+          # Copy files from secret
+          cp /pki-secret/ca.crt /pki/ca.crt
+          cp /pki-secret/ca.key /pki/private/ca.key
+          cp /pki-secret/dh.pem /pki/dh.pem
+          cp /pki-secret/ta.key /pki/ta.key
+          cp /pki-secret/server.crt /pki/issued/server.crt
+          cp /pki-secret/server.key /pki/private/server.key
+
+          # Set permissions
+          chmod 600 /pki/private/*
+          chmod 644 /pki/ca.crt /pki/dh.pem /pki/ta.key
+          chmod 644 /pki/issued/*
+
+          echo "PKI initialization complete"
+        volumeMounts:
+        - name: openvpn-pki
+          mountPath: /pki
+        - name: openvpn-pki-secret
+          mountPath: /pki-secret
+          readOnly: true
       containers:
       - name: openvpn
         image: us-central1-docker.pkg.dev/project-ghost-695752/ghost-images/openvpn:latest
@@ -32,7 +71,6 @@ spec:
         volumeMounts:
         - name: openvpn-pki
           mountPath: /etc/openvpn/pki
-          readOnly: true
         resources:
           requests:
             memory: "64Mi"
@@ -54,6 +92,9 @@ spec:
             cpu: "250m"
       volumes:
       - name: openvpn-pki
+        persistentVolumeClaim:
+          claimName: openvpn-pki
+      - name: openvpn-pki-secret
         secret:
           secretName: openvpn-pki
           defaultMode: 0600

@@ -7,7 +7,7 @@ import { logger } from './logger';
 import { initializeDatabase } from './db';
 import { initializeAmi, closeAmi } from './asterisk/ami';
 import { redis } from './redis';
-import { authRouter, extensionRouter, logsRouter, statusRouter } from './routes';
+import { authRouter, extensionRouter, logsRouter, statusRouter, openvpnRouter } from './routes';
 
 const app = express();
 
@@ -66,6 +66,7 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/asterisk/extension', extensionRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/status', statusRouter);
+app.use('/api/openvpn', openvpnRouter);
 
 // Also mount log routes under specific paths for convenience
 app.use('/api/asterisk/logs', (req, res, next) => {

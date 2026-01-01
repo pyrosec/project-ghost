@@ -70,9 +70,18 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: CA_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: CA_ENCRYPTION_KEY
+            - name: OPENVPN_PKI_PATH
+              value: "/openvpn-pki"
           volumeMounts:
             - name: asterisk-config
               mountPath: /asterisk-config
+            - name: openvpn-pki
+              mountPath: /openvpn-pki
           resources:
             requests:
               memory: "32Mi"
@@ -96,6 +105,9 @@ spec:
         - name: asterisk-config
           persistentVolumeClaim:
             claimName: asterisk-data
+        - name: openvpn-pki
+          persistentVolumeClaim:
+            claimName: openvpn-pki
 ---
 apiVersion: v1
 kind: Service

@@ -117,3 +117,17 @@ spec:
   resources:
     requests:
       storage: 1Gi
+---
+# OpenVPN PKI storage for CA and issued certificates
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openvpn-pki
+  namespace: ghost
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard-rwo
+  resources:
+    requests:
+      storage: 1Gi

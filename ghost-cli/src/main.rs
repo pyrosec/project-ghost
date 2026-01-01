@@ -6,7 +6,8 @@ mod auth;
 mod commands;
 mod config;
 
-use commands::{extension, logs, status, token};
+use commands::{extension, logs, openvpn, status, token};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "ghost")]
@@ -61,6 +62,28 @@ enum Commands {
     /// Redis key operations
     #[command(subcommand)]
     Redis(RedisCommands),
+
+    /// Issue an OpenVPN client certificate (superuser only)
+    #[command(name = "issue-cert")]
+    IssueCert {
+        /// Username for the certificate (e.g., rauss)
+        username: String,
+
+        /// Output file path (default: <username>.ovpn)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+
+    /// List issued OpenVPN certificates (superuser only)
+    #[command(name = "list-certs")]
+    ListCerts,
+
+    /// Revoke an OpenVPN certificate (superuser only)
+    #[command(name = "revoke-cert")]
+    RevokeCert {
+        /// Username of the certificate to revoke
+        username: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -385,6 +408,15 @@ async fn main() -> Result<()> {
                 status::redis_set(&api, &key, &value, ttl).await?;
             }
         },
+        Commands::IssueCert { username, output } => {
+            openvpn::issue_cert(&api, &username, output).await?;
+        }
+        Commands::ListCerts => {
+            openvpn::list_certs(&api).await?;
+        }
+        Commands::RevokeCert { username } => {
+            openvpn::revoke_cert(&api, &username).await?;
+        }
     }
 
     Ok(())
