@@ -17,6 +17,11 @@ Component "sms.$DOMAIN" "sms"
     "mam"
   }
 
+Component "tty.$DOMAIN" "tty"
+  modules_enabled = {
+    "mam"
+  }
+
 Component "conference.$DOMAIN" "muc"
 
 Component "upload.$DOMAIN" "http_file_share"

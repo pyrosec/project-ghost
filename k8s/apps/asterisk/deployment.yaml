@@ -38,6 +38,9 @@ spec:
             - containerPort: 8088
               name: http
               protocol: TCP
+            - containerPort: 5038
+              name: ami
+              protocol: TCP
           # RTP ports handled by LoadBalancer portRange
           envFrom:
             - configMapRef:
@@ -81,6 +84,8 @@ spec:
             - name: tls-certs
               mountPath: /etc/letsencrypt/live/pyrosec.is
               readOnly: true
+            - name: tty-audio
+              mountPath: /var/lib/asterisk/sounds/tty
           securityContext:
             capabilities:
               add:
@@ -97,6 +102,63 @@ spec:
               port: 8088
             initialDelaySeconds: 15
             periodSeconds: 10
+        # RTT/TTY Bridge sidecar - shares tty-audio volume with asterisk
+        - name: rtt-bridge
+          image: us-central1-docker.pkg.dev/project-ghost-695752/ghost/rtt-bridge:latest
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 4573
+              name: agi
+          envFrom:
+            - secretRef:
+                name: ghost-secrets
+          env:
+            - name: ASTERISK_HOST
+              value: "localhost"
+            - name: ASTERISK_PORT
+              value: "5038"
+            - name: TTY_AUDIO_DIR
+              value: "/var/lib/asterisk/sounds/tty"
+            - name: REDIS_URI
+              value: "redis://redis:6379"
+            - name: AMI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: AMI_USERNAME
+            - name: AMI_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ghost-secrets
+                  key: AMI_PASSWORD
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: ghost-config
+                  key: LOG_LEVEL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: tty-audio
+              mountPath: /var/lib/asterisk/sounds/tty
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
       volumes:
         - name: asterisk-data
           persistentVolumeClaim:
@@ -112,6 +174,8 @@ spec:
                 path: fullchain.pem
               - key: tls.key
                 path: privkey.pem
+        - name: tty-audio
+          emptyDir: {}
 ---
 # LoadBalancer for RTP media (UDP only)
 # Ports 30000-30099 for Asterisk RTP traffic
@@ -544,5 +608,9 @@ spec:
     - port: 35061
       targetPort: 35061
       name: sip-tls
+      protocol: TCP
+    - port: 5038
+      targetPort: 5038
+      name: ami
       protocol: TCP
   type: ClusterIP

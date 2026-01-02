@@ -1,4 +1,4 @@
-FROM debian:10
+FROM debian:11
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         lsb-base \
@@ -7,7 +7,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         procps \
         adduser \
         libidn11 \
-        libicu63 \
+        libicu67 \
         libssl1.1 \
         lua5.2 \
         openssl \
@@ -47,6 +47,7 @@ RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_cloud_noti
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_smacks
 #RUN prosodyctl install --server=https://modules.prosody.im/rocks/ mod_http_upload
 COPY ./modules/mod_sms.lua /usr/local/lib/prosody/modules/mod_sms.lua
+COPY ./modules/mod_tty.lua /usr/local/lib/prosody/modules/mod_tty.lua
 COPY ./templates /templates
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod 755 /docker-entrypoint.sh

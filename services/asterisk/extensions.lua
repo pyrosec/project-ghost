@@ -675,6 +675,130 @@ extensions.stasis = {
   end
 }
 
+-- RTT/TTY Outbound context for sending text messages via phone call
+-- Variables: RTT_NUMBER, RTT_MESSAGE, RTT_CALL_ID
+-- TTY send subroutine - called after answer, before bridge
+-- Uses Baudot tones for PSTN compatibility
+extensions.rtt_send_sub = {
+  ["s"] = function (context, extension)
+    local message = channel.RTT_MESSAGE:get()
+    local call_id = channel.RTT_CALL_ID:get()
+
+    print("TTY SEND SUB: Sending message, length: " .. (message and #message or 0))
+
+    if message and #message > 0 then
+      -- Use tty_send for Baudot tones (PSTN compatible)
+      -- rtt-bridge runs as sidecar, so use localhost
+      app.AGI("agi://localhost:4573/tty_send?message=" .. message .. "&call_id=" .. (call_id or "unknown"))
+    end
+
+    -- Return to continue with bridging (or in our case, hangup after send)
+    return app["return"]()
+  end
+}
+
+extensions.rtt_outbound = {
+  ["rtt"] = function (context, extension)
+    local number = channel.RTT_NUMBER:get()
+    local message = channel.RTT_MESSAGE:get()
+    local call_id = channel.RTT_CALL_ID:get()
+
+    print("TTY OUTBOUND: Initiating call to " .. (number or "nil"))
+    print("TTY OUTBOUND: Message length: " .. (message and #message or 0))
+    print("TTY OUTBOUND: Call ID: " .. (call_id or "nil"))
+
+    if not number or not message then
+      print("TTY OUTBOUND: Missing number or message, aborting")
+      return app.hangup()
+    end
+
+    -- Format number for PSTN (add 1 prefix for US numbers)
+    local dial_number = #number == 10 and ("1" .. number) or number
+
+    -- Get the outbound trunk
+    local outbound = os.getenv("VOIPMS_SIP_USERNAME")
+
+    -- Set caller ID
+    local callerid = cache:get("didfor.555") or "5125720271"
+    set_callerid(channel, callerid)
+
+    print("TTY OUTBOUND: Dialing SIP/" .. outbound .. "/" .. dial_number)
+
+    -- Dial with U() subroutine option: runs rtt_send_sub on answer, before bridge
+    -- This sends TTY Baudot tones after answer
+    local status = dial("SIP/" .. outbound .. "/" .. dial_number, 60, "TU(rtt_send_sub^s^1)")
+
+    print("TTY OUTBOUND: Dial completed, status: " .. (status or "nil"))
+
+    return app.hangup()
+  end
+}
+
+-- Interactive TTY outbound context for bidirectional TTY conversations via XMPP
+-- Variables set by AMI Originate: TTY_SESSION_ID, TTY_NUMBER, TTY_USER
+extensions.tty_outbound = {
+  ["tty_interactive"] = function (context, extension)
+    local session_id = channel.TTY_SESSION_ID:get()
+    local number = channel.TTY_NUMBER:get()
+    local user = channel.TTY_USER:get()
+
+    print("TTY INTERACTIVE: session=" .. (session_id or "nil"))
+    print("TTY INTERACTIVE: number=" .. (number or "nil"))
+    print("TTY INTERACTIVE: user=" .. (user or "nil"))
+
+    if not session_id or not number then
+      print("TTY INTERACTIVE: Missing session_id or number, aborting")
+      return app.hangup()
+    end
+
+    -- Format number for PSTN (add 1 prefix for US numbers)
+    local dial_number = #number == 10 and ("1" .. number) or number
+
+    -- Get the outbound trunk
+    local outbound = os.getenv("VOIPMS_SIP_USERNAME")
+
+    -- Set caller ID
+    local callerid = os.getenv("VOIPMS_CALLERID") or cache:get("didfor.555") or "5125720271"
+    set_callerid(channel, callerid)
+
+    print("TTY INTERACTIVE: Dialing SIP/" .. outbound .. "/" .. dial_number)
+
+    -- Dial with answer detection
+    local status = dial("SIP/" .. outbound .. "/" .. dial_number, 60, "T")
+
+    print("TTY INTERACTIVE: Dial status=" .. (status or "nil"))
+
+    if status == "ANSWER" then
+      -- Get current channel name for hangup capability
+      local current_channel = channel.CHANNEL:get()
+
+      -- Notify answered via AGI
+      print("TTY INTERACTIVE: Call answered, notifying session manager")
+      app.AGI("agi://localhost:4573/tty_session?action=answered&session_id=" .. session_id ..
+              "&channel=" .. (current_channel or ""))
+
+      -- Enter bidirectional TTY loop
+      -- This AGI handler will loop, checking for:
+      -- 1. User text from Redis -> send as TTY tones
+      -- 2. End signal from user -> break loop
+      print("TTY INTERACTIVE: Entering interactive TTY loop")
+      app.AGI("agi://localhost:4573/tty_interactive?session_id=" .. session_id)
+
+      print("TTY INTERACTIVE: Interactive loop ended")
+    else
+      -- Notify failed
+      print("TTY INTERACTIVE: Call failed, status=" .. (status or "nil"))
+      app.AGI("agi://localhost:4573/tty_session?action=failed&session_id=" .. session_id ..
+              "&reason=" .. (status or "UNKNOWN"))
+    end
+
+    -- Notify ended (whether answered or not, this runs on hangup)
+    print("TTY INTERACTIVE: Notifying session ended")
+    app.AGI("agi://localhost:4573/tty_session?action=ended&session_id=" .. session_id)
+
+    return app.hangup()
+  end
+}
 
 function fallback_register_handler(context, extension)
       if #channel.extcallerid:get() < 10 then
@@ -730,7 +854,7 @@ extensions.authenticated_internal = {
 
       channel.text_mode = "rtt";
       channel.text_codec = "utf-8";
-      app.AGI("agi://rtt-bridge:8080/rtt_bridge");
+      app.AGI("agi://localhost:4573/rtt_bridge");
       app.hangup();
     end,
     [".*9X_"] = function (context, extension)
