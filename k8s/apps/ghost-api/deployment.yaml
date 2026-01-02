@@ -22,12 +22,73 @@ spec:
                 matchLabels:
                   app: asterisk
               topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: init-pki
+          image: alpine:3.19
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Check if PKI is already initialized
+              if [ -f /pki/pki/ca.crt ]; then
+                echo "PKI already initialized, skipping"
+                exit 0
+              fi
+
+              echo "Initializing PKI from secret..."
+
+              # Create directory structure
+              mkdir -p /pki/pki/private /pki/pki/issued /pki/pki/reqs
+
+              # Copy files from secret
+              cp /pki-secret/ca.crt /pki/pki/ca.crt
+              cp /pki-secret/ca.key /pki/pki/private/ca.key
+              cp /pki-secret/dh.pem /pki/pki/dh.pem
+              cp /pki-secret/ta.key /pki/pki/ta.key
+              cp /pki-secret/server.crt /pki/pki/issued/server.crt
+              cp /pki-secret/server.key /pki/pki/private/server.key
+
+              # Set permissions - make writable by ghost user (uid 1001)
+              chown -R 1001:1001 /pki/pki
+              chmod 700 /pki/pki/private /pki/pki/issued /pki/pki/reqs
+              chmod 600 /pki/pki/private/*
+              chmod 644 /pki/pki/ca.crt /pki/pki/dh.pem /pki/pki/ta.key
+              chmod 644 /pki/pki/issued/*
+
+              echo "PKI initialization complete"
+          volumeMounts:
+            - name: openvpn-pki
+              mountPath: /pki
+            - name: openvpn-pki-secret
+              mountPath: /pki-secret
+              readOnly: true
+        - name: install-openssl
+          image: alpine:3.19
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache openssl
+              cp /usr/bin/openssl /tools/openssl
+              # Copy required libraries
+              mkdir -p /tools/lib
+              cp /lib/ld-musl-*.so.1 /tools/lib/ 2>/dev/null || true
+              cp /usr/lib/libcrypto.so* /tools/lib/
+              cp /usr/lib/libssl.so* /tools/lib/
+              echo "OpenSSL installed to /tools"
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
       containers:
         - name: ghost-api
           image: us-central1-docker.pkg.dev/project-ghost-695752/ghost/ghost-api:latest
           ports:
             - containerPort: 8080
           env:
+            - name: PATH
+              value: "/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/tools/lib"
             - name: PORT
               value: "8080"
             - name: DATABASE_URL
@@ -82,13 +143,15 @@ spec:
               mountPath: /asterisk-config
             - name: openvpn-pki
               mountPath: /openvpn-pki
+            - name: tools
+              mountPath: /tools
           resources:
             requests:
-              memory: "32Mi"
+              memory: "128Mi"
               cpu: "25m"
             limits:
-              memory: "32Mi"
-              cpu: "125m"
+              memory: "256Mi"
+              cpu: "250m"
           livenessProbe:
             httpGet:
               path: /health
@@ -108,6 +171,12 @@ spec:
         - name: openvpn-pki
           persistentVolumeClaim:
             claimName: openvpn-pki
+        - name: openvpn-pki-secret
+          secret:
+            secretName: openvpn-pki
+            defaultMode: 0600
+        - name: tools
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

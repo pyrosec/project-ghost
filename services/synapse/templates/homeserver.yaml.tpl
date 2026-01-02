@@ -39,8 +39,11 @@ form_secret: "$FORM_SECRET"
 signing_key_path: "/data/$SYNAPSE_SERVER_NAME.signing.key"
 trusted_key_servers:
   - server_name: "matrix.org"
-turn_uris: [ "$TURN_URI" ]
-turn_shared_secret: "$TURN_SECRET"
+turn_uris:
+  - "turn:stun.pyrosec.gg:3478?transport=udp"
+  - "turn:stun.pyrosec.gg:3478?transport=tcp"
+  - "turns:stun.pyrosec.gg:5349?transport=tcp"
+turn_shared_secret: "$TURN_SHARED_SECRET"
 turn_user_lifetime: 86400000
 turn_allow_guests: True
 recaptcha_public_key: "$RECAPTCHA_PUBLIC_KEY"

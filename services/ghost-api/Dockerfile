@@ -17,6 +17,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install openssl for certificate generation
+RUN apk add --no-cache openssl
+
 # Install production dependencies only
 COPY package.json yarn.lock* ./
 RUN yarn install --production --frozen-lockfile || yarn install --production

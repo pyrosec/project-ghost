@@ -1,5 +1,5 @@
 [general]
-externip=$EXTERNIP
+externip=$EXTERNAL_SIGNALING_IP
 nat=force_rport,comedia
 localnet=$IPV4_ADDRESS
 tlsdontverifyserver=yes

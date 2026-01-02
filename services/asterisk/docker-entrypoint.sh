@@ -19,7 +19,7 @@ function write_sip_conf() {
   if [ ! -f /etc/asterisk/sip.conf ]; then
     cat /templates/sip.conf.tpl | envsubst > /etc/asterisk/sip.conf
   else
-    sed -i "s/externip=.*$/externip=$EXTERNIP/" /etc/asterisk/sip.conf
+    sed -i "s/externip=.*$/externip=$EXTERNAL_SIGNALING_IP/" /etc/asterisk/sip.conf
     sed -i "s/localnet=.*$/localnet=$IPV4_ADDRESS/" /etc/asterisk/sip.conf
   fi
 }

@@ -189,8 +189,8 @@ metadata:
   name: coturn-external-ips
   namespace: ghost
 data:
-  IP_1: "34.172.239.116"
-  IP_2: "34.60.10.235"
+  IP_1: "34.67.110.50"
+  IP_2: "34.170.103.8"
 ---
 # LoadBalancer Service for Coturn - UDP (STUN/TURN)
 apiVersion: v1
@@ -205,7 +205,7 @@ spec:
   selector:
     app: coturn
   type: LoadBalancer
-  loadBalancerIP: 34.172.239.116
+  loadBalancerIP: 34.67.110.50
   externalTrafficPolicy: Local
   ports:
     - port: 3478
@@ -225,12 +225,10 @@ metadata:
   namespace: ghost
   annotations:
     cloud.google.com/load-balancer-type: "External"
-    networking.gke.io/load-balancer-ip-addresses: "ghost-coturn-ip-1"
 spec:
   selector:
     app: coturn
   type: LoadBalancer
-  loadBalancerIP: 34.172.239.116
   externalTrafficPolicy: Local
   ports:
     - port: 3478
@@ -250,12 +248,11 @@ metadata:
   namespace: ghost
   annotations:
     cloud.google.com/load-balancer-type: "External"
-    networking.gke.io/load-balancer-ip-addresses: "ghost-coturn-ip-2"
 spec:
   selector:
     app: coturn
   type: LoadBalancer
-  loadBalancerIP: 34.60.10.235
+  loadBalancerIP: 34.170.103.8
   externalTrafficPolicy: Local
   ports:
     - port: 3479
